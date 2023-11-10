@@ -6,15 +6,6 @@ import dj_database_url
 env = Env()
 env.read_env()
 
-# Parser definition
-HEADERS = {
-    "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36"
-                  "(KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
-    "Accept": "*/*",
-    "Accept-Encoding": "gzip, deflate, br",
-    "Connection": "keep-alive",
-}
-
 # Bot definition
 TELEGRAM_TOKEN = env('BOT_TOKEN', None)
 BOT_LOG_LEVEL = env('BOT_LOG_LEVEL', 10)
@@ -72,7 +63,6 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'parserbot.wsgi.application'
-
 
 DATABASES = {
     'default': dj_database_url.parse(
