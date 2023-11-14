@@ -11,6 +11,11 @@ TELEGRAM_TOKEN = env('BOT_TOKEN', None)
 BOT_LOG_LEVEL = env('BOT_LOG_LEVEL', 10)
 BOT_MODE = env('BOT_MODE', 'callback')  # webhook in other case
 
+# Scrappers definition
+TT_SIGNATURE_URL = env('TT_SIGNATURE_URL')
+TT_MUSIC_ERROR_ATTEMPTS = env('TT_MUSIC_ERROR_ATTEMPTS', 3)
+TT_USER_ERROR_ATTEMPTS = env('TT_USER_ERROR_ATTEMPTS', 5)
+
 # Django definition
 BASE_DIR = Path(__file__).resolve().parent.parent
 

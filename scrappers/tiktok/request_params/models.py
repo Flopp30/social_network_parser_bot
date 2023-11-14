@@ -1,8 +1,4 @@
-SCRAPPER_SETTINGS: dict[str: list] = {
-    "tiktok": [],
-    "youtube": [],
-    "instagram": [],
-}
+SCRAPPER_TIKTOK_SETTINGS = []
 
 
 class TikTokScrapperConfig:
@@ -29,4 +25,4 @@ class TikTokScrapperConfig:
         }
         self.headers = headers
         self.is_available = is_available
-        SCRAPPER_SETTINGS["tiktok"].append(self)
+        SCRAPPER_TIKTOK_SETTINGS.append(self)

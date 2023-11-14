@@ -1,4 +1,4 @@
-from parserbot.settings_requests.models import TikTokScrapperConfig
+from scrappers.tiktok.request_params.models import TikTokScrapperConfig
 
 iphone_mozilla_settings = TikTokScrapperConfig(
     ms_token=(
