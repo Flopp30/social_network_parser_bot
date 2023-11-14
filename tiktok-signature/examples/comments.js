@@ -1,4 +1,4 @@
-const Signer = require("../");
+const Signer = require("../index");
 const axios = require("axios"); // NOTE: not adding this to package.json, you'll need to install it manually
 
 // We use Apple, based on the issue comments in the repo, this helps prevent TikTok's captcha from triggering

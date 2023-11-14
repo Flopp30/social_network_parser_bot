@@ -1,4 +1,4 @@
-const Signer = require("../");
+const Signer = require("../index");
 const axios = require("axios"); // NOTE: not adding this to package.json, you'll need to install it manually
 
 // The `username` of your TikTok profile.

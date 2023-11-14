@@ -1,4 +1,4 @@
-const Signer = require("..");
+const Signer = require("../index");
 const axios = require("axios"); // NOTE: not adding this to package.json, you'll need to install it manually
 
 // Get your SEC_UID from https://t.tiktok.com/api/user/detail/?aid=1988&uniqueId=username&language=it

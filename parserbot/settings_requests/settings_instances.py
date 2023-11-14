@@ -87,10 +87,6 @@ iphone_mozilla_settings = TikTokScrapperConfig(
 )
 
 ubuntu_edge_settings = TikTokScrapperConfig(
-    # ms_token=(
-    #     "u0ClNcYnrbbx24pmlELSGz1ObzU-GqK8VJD7Yzv0Uctz3ju-kV6zDY4NHSEsUaHQBW8e0ZPUO6pMd28R4IQ9K8XT5W"
-    #     "wpujKQUwGe-qYhBrRVmNCd8N49wZqtaLi4unTaA-PvgKJaJtwb_s7QTfY="
-    # ),
     ms_token=(
         "a-3rDqsS3w3GyYY-8dY30hjA-Szed-O9Fm--dJLfrogNV60k3swe-hGn9iLrjJVVvrg-0dGKJN67DY"
         "LDyneldxFQ2E0wYgRAqreP9tNRpN-YI0J7sSifCpLAf_OU5osNoFshSQQT-e-ptM7R8A=="
@@ -245,86 +241,6 @@ windows_edge_settings = TikTokScrapperConfig(
         'accept-language': 'ru,en;q=0.9,en-GB;q=0.8,en-US;q=0.7',
         # 'dnt': '1',
         'referer': 'https://www.tiktok.com/',
-        'sec-ch-ua': '"Microsoft Edge";v="119", "Chromium";v="119", "Not?A_Brand";v="24"',
-        'sec-ch-ua-mobile': '?1',
-        'sec-ch-ua-platform': '"Android"',
-        'sec-fetch-dest': 'empty',
-        'sec-fetch-mode': 'cors',
-        'sec-fetch-site': 'same-origin',
-        'user-agent': (
-            'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) '
-            'Chrome/119.0.0.0 Mobile Safari/537.36 Edg/119.0.0.0'
-        ),
-    },
-)
-
-user_settings = TikTokScrapperConfig(
-    ms_token=(
-        'n5V6mWJhvLVOimazFapv6A3DiGrgnP-EOTfLRldf56OX-fvCKEs4l1_fGGCUyTN8FB4MGuSNN6'
-        '-Rl_n80ikCKC-qfxeywaq7XXl69BMwymqtJn3HDhF2cFOF_-B7GYeXuoUbGE5A1qN8ix1IYg=='
-    ),
-    x_bogus='DFSzswSOeLGANeR8tmfdTz9WcBrb',
-    signature='_02B4Z6wo00001bVRBfAAAIDBtVEF8qHSKE21cQlAAAgF00',
-    cookies={
-        "tt_csrf_token": "BZlcQpNB-B1601PshgEXNv5SmQQX4b3y-VDU",
-        "tt_chain_token": "m0RPVq7GmrdVjflkg0bdpA==",
-        "__tea_cache_tokens_1988": (
-            "{%22_type_%22:%22default%22%2C%22"
-            "user_unique_id%22:%227298674240000624133%22%2C%22timestamp%22:1699867902043}"
-        ),
-        'tiktok_webapp_theme': 'light',
-        "odin_tt": (
-            "c0e0f0168e1a522b621007afe66c5389e9926dbf7daf30f99030051ddf6a7dd7bfc23"
-            "d11a2988addc149929fd4ac76d6ae85e5640749c7a897aecf35f97063e5f6f388cd6acd1400a66e08b52af8e1a9"
-        ),
-        "perf_feed_cache": (
-            "{%22expireTimestamp%22:1700038800000%2C%22itemIds%22"
-            ":[%227292715431410846978%22%2C%227287156080377990405%22]}"
-        ),
-        "passport_csrf_token": "aee1c6dc520bc2a0e1a494b67d260b1c",
-        "passport_csrf_token_default": "aee1c6dc520bc2a0e1a494b67d260b1c",
-        "s_v_web_id": "verify_loq5oipy_68HOg4Il_dcML_495r_A4oN_RbzOzpKE1rSw",
-        "ttwid": (
-            "1%7C3JbdrNra2QvlI3q2QIjNCv8GQuAunxZkYMO8uYQeRMk%7C1699882290%7"
-            "Cca42efe9d61762b62e7b25c84543dcaa2a2fecc8bea5cffde50d5469f7e68493"
-        ),
-    },
-    params={
-        'aid': '1988',
-        'app_language': 'ru-RU',
-        'app_name': 'tiktok_web',
-        'browser_language': 'ru-RU',
-        'browser_name': 'Mozilla',
-        'browser_online': 'true',
-        'browser_platform': 'Win32',
-        'browser_version': (
-            '5.0%20%28Linux%3B%20Android%206.0%3B%20Nexus%205%20Build%2FMRA58N%29%20AppleWebKit%2F537.36%20%28'
-            'KHTML%2C%20like%20Gecko%29%20Chrome%2F119.0.0.0%20Mobile%20Safari%2F537.36%20Edg%2F119.0.0.0'
-        ),
-        'channel': 'tiktok_web',
-        'cookie_enabled': 'true',
-        'count': '35',
-        'device_id': '7300552300538447366',
-        'device_platform': 'web_mobile',
-        'focus_state': 'true',
-        'history_len': '1',
-        'language': 'ru-RU',
-        'is_fullscreen': 'false',
-        'is_page_visible': 'true',
-        'os': 'android',
-        'referer': 'https://www.tiktok.com/@dada_ahoufe_',
-        'region': 'TR',
-        'screen_height': '831',
-        'screen_width': '664',
-        'tz_name': 'Europe/Moscow',
-        'webcast_language': 'ru-RU',
-    },
-    headers={
-        'authority': 'www.tiktok.com',
-        'accept': '*/*',
-        'accept-language': 'ru,en;q=0.9,en-GB;q=0.8,en-US;q=0.7',
-        # 'dnt': '1',
-        'referer': 'https://www.tiktok.com/@dada_ahoufe_',
         'sec-ch-ua': '"Microsoft Edge";v="119", "Chromium";v="119", "Not?A_Brand";v="24"',
         'sec-ch-ua-mobile': '?1',
         'sec-ch-ua-platform': '"Android"',
