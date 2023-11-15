@@ -24,7 +24,10 @@ class User(models.Model):
         verbose_name='Даты и время регистрации',
         auto_now_add=True,
     )
-
+    is_approved = models.BooleanField(
+        verbose_name='Подтвержден',
+        default=False,
+    )
     class Meta:
         verbose_name = 'Пользователь'
         verbose_name_plural = 'Пользователи'

@@ -1,0 +1,9 @@
+FROM python:3.11-alpine
+WORKDIR /app
+# copy and install reqs
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+# copy project
+COPY . .
+# run celery
+CMD celery -A parserbot worker --loglevel=info --concurrency=10

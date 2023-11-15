@@ -108,6 +108,13 @@ STATIC_DIR = os.path.join(BASE_DIR, 'static')
 STATICFILES_DIRS = [
     STATIC_DIR,
 ]
-STATIC_ROOT = './assets/'
+# STATIC_ROOT = './assets/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+CELERY_BROKER = env('CELERY_BROKER')
+CELERY_BACKEND = env('CELERY_BACKEND')
+CELERY_IMPORTS = ('parserbot.tasks',)
+# REDIS_HOST = env('REDIS_HOST')
+# REDIS_PORT = env('REDIS_PORT')

@@ -1,6 +1,7 @@
 import asyncio
 import copy
 import csv
+import io
 import itertools
 import logging
 import random
@@ -11,6 +12,7 @@ from json import JSONDecodeError
 from urllib.parse import urlencode
 
 import aiohttp
+import httpx
 import requests
 from django.conf import settings
 from scrappers.tiktok.request_params.models import SCRAPPER_TIKTOK_SETTINGS
@@ -82,6 +84,8 @@ class TikTokScrapper:
     user_api_url = CONSTANT_USER_API_URL
     configs = SCRAPPER_TIKTOK_SETTINGS
 
+    tg_api_send_doc_url = f"https://api.telegram.org/bot{settings.TELEGRAM_TOKEN}/sendDocument"
+
     def __init__(self):
         self.uniq_ids = set()
         self.total = list()
@@ -93,7 +97,7 @@ class TikTokScrapper:
             self.music_attempts = 3
 
     @timer
-    async def run(self, url: str):
+    async def run(self, url: str, tg_chat_id: int = None):
         if 'music' in url:
             music_id = int(url.split('-')[-1].replace('/', ''))
             cursors = [i for i in range(0, 5001, 500)]
@@ -129,7 +133,30 @@ class TikTokScrapper:
 
         logger.info(f'Собрано {len(self.uniq_ids)} уникальных видео')
         logger.info(f'Всего собрано {len(self.total)} видео')
+        if tg_chat_id:
+            await self._send_report_to_tg(tg_chat_id, normalized_data, file_name)
+            return
         self._save_to_csv(collected=normalized_data, filename=file_name)
+
+    async def _send_report_to_tg(self, tg_chat_id, normalized_data: list[CollectedItem], file_name='report.csv'):
+        string_io = self.get_string_io(normalized_data)
+        csv_data = string_io.getvalue().encode('utf-8')
+        files = {
+            "document": (file_name, csv_data, "text/csv"),
+        }
+        params = {
+            "chat_id": tg_chat_id,
+            "caption": f'Собрано {len(self.uniq_ids)} уникальных видео\nВсего собрано {len(self.total)} видео'
+        }
+        response = None
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(self.tg_api_send_doc_url, params=params, files=files)
+                response.raise_for_status()
+                logger.info(f"Report send with status {response.status_code}")
+        except Exception as e:
+            logger.error(response.__dict__)
+            logger.error(e)
 
     async def _request_user_process(self, sec_uid) -> list[CollectedItem]:
         collected_items = []
@@ -294,12 +321,22 @@ class TikTokScrapper:
         }
 
     @staticmethod
-    def _save_to_csv(collected: list[dict], file_path: str = '', filename: str = 'report.csv'):
+    def _save_to_csv(collected: list[CollectedItem], file_path: str = '', filename: str = 'report.csv'):
         fieldnames = ['link', 'upload', 'description', 'duration', 'views', 'likes', 'comments', 'resend', 'saves']
         with open(f'{file_path}{filename}', 'w', newline='') as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames)
             writer.writeheader()
             writer.writerows(collected)
+
+    @staticmethod
+    def get_string_io(collected: list[CollectedItem]) -> io:
+        fieldnames = ['link', 'upload', 'description', 'duration', 'views', 'likes', 'comments', 'resend', 'saves']
+        output = io.StringIO()
+        writer = csv.DictWriter(output, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(collected)
+        output.seek(0)
+        return output
 
     @staticmethod
     def _format_timestamp(timestamp):
@@ -312,5 +349,5 @@ class TikTokScrapper:
 
 if __name__ == '__main__':
     scrapper = TikTokScrapper()
-    asyncio.run(scrapper.run('https://www.tiktok.com/@domixx007'))
+    # asyncio.run(scrapper.run('https://www.tiktok.com/@domixx007'))
     # asyncio.run(scrapper.run('https://www.tiktok.com/music/Scary-Garry-6914598970259490818'))

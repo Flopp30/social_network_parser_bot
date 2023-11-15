@@ -5,3 +5,5 @@ environs==9.5.*
 django-relativedelta==2.0.*
 dj-database-url==2.1.0
 requests==2.31.*
+celery==5.3.*
+redis==5.0.*

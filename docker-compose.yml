@@ -1,0 +1,101 @@
+version: '3.7'
+
+services:
+  signature:
+    build:
+      context: .
+      dockerfile: Dockerfile_signature
+    image: tiktok-signature:1.0.0
+    environment:
+      PORT: 8080
+    ports:
+      - 8080:8080
+
+  redis:
+    image: redis:alpine
+    command:
+      - redis-server
+    restart: always
+    ports:
+      - "6379:6379"
+    depends_on:
+      - signature
+
+  celery:
+    build:
+      context: .
+      dockerfile: Dockerfile_celery
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    depends_on:
+      - signature
+      - redis
+
+  parserbot-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile_bot
+    image: parserbot-django:latest
+    env_file:
+      - .env
+    environment:
+      DJ_DEBUG: "False"
+    depends_on:
+      - signature
+      - redis
+      - celery
+    command:
+      - sh
+      - -c
+      - |
+        python manage.py migrate --noinput
+        python manage.py run_bot
+
+  parserbot-admin:
+    build:
+      context: .
+      dockerfile: Dockerfile_bot
+    image: parserbot-django:latest
+    ports:
+      - 8000
+    volumes:
+      - ./nginx-templates:/app/nginx-templates
+      - nginx_static:/app/static/
+      - nginx_media:/var/www/media/
+    env_file:
+      - .env
+    environment:
+      DJ_DEBUG: "True"
+      DJ_ALLOWED_HOSTS: '127.0.0.1,localhost'
+      DJ_CSRF_TRUSTED_ORIGINS: 'http://127.0.0.1:8000'
+    depends_on:
+      - signature
+      - redis
+      - celery
+      - parserbot-bot
+    command:
+      - sh
+      - -c
+      - |
+        python manage.py collectstatic --noinput
+        python manage.py runserver 0.0.0.0:8000 --noreload
+
+  nginx:
+    image: nginx
+    ports:
+      - '8000:80'
+    environment:
+      UPSTREAM_SERVER: parserbot-admin:8000
+    volumes:
+      - ./nginx-templates:/etc/nginx/templates/
+      - nginx_static:/var/www/static/
+      - nginx_media:/var/www/media/
+    depends_on:
+      - parserbot-admin
+
+volumes:
+  db_data:
+  nginx_media:
+  nginx_static:
