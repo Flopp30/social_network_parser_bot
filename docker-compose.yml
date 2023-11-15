@@ -62,7 +62,7 @@ services:
       - 8000
     volumes:
       - ./nginx-templates:/app/nginx-templates
-      - nginx_static:/app/static/
+      - nginx_static:/app/assets/
       - nginx_media:/var/www/media/
     env_file:
       - .env
