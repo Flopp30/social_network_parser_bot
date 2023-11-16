@@ -194,7 +194,6 @@ class TikTokScrapper:
             if not serialized_data.get('hasMore'):
                 attempt += 1
                 logger.debug(f'Limit: {cursor}')
-                sec_uid = await self._get_sec_uid_from_url(url)
                 await asyncio.sleep(random.randint(5, 10))
                 continue
 
