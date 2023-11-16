@@ -306,8 +306,6 @@ class TikTokScrapper:
                     async with session.get(url) as response:
                         if not response.status == 200:
                             logger.error(f"Failed to get page content from {url}. Status code: {response.status}")
-                            return None
-
                         content = await response.text()
             except Exception as e:
                 logger.error(e)
