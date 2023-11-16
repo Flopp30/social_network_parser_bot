@@ -51,23 +51,25 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def parser_welcome_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, **kwargs):
-    await check_bot_context(update, context)
-    message = (
-        "Отправь ссылку для парсинга\n"
-        "Умею: tik-tok (user, music).\n"
-        "Чтобы избежать проблем:\n"
-        "   - Ссылка должны быть максимально чистой.\n"
-        "   - Не надо кидать ссылки не на тот ресурс, пожалуйста.\n"
-        "Примеры:\n<code>https://www.tiktok.com/@domixx007</code> \n\n"
-        "<code>https://www.tiktok.com/music/Scary-Garry-6914598970259490818</code>\n\n"
-        "Я оконечно обложил все валидацией, но давайте не будем испытывать судьбу 😉"
-    )
-    await context.bot.send_message(
-        update.effective_chat.id,
-        text=message,
-        parse_mode='HTML',
-    )
-    return "AWAIT_LINK_TO_PARSE"
+    if update.callback_query or kwargs.get('redirect'):
+        await check_bot_context(update, context)
+        message = (
+            "Отправь ссылку для парсинга\n"
+            "Умею: tik-tok (user, music).\n"
+            "Чтобы избежать проблем:\n"
+            "   - Ссылка должны быть максимально чистой.\n"
+            "   - Не надо кидать ссылки не на тот ресурс, пожалуйста.\n"
+            "Примеры:\n<code>https://www.tiktok.com/@domixx007</code> \n\n"
+            "<code>https://www.tiktok.com/music/Scary-Garry-6914598970259490818</code>\n\n"
+            "Я оконечно обложил все валидацией, но давайте не будем испытывать судьбу 😉"
+        )
+        await context.bot.send_message(
+            update.effective_chat.id,
+            text=message,
+            parse_mode='HTML',
+        )
+        return "AWAIT_LINK_TO_PARSE"
+    return "AWAIT_WELCOME_CHOICE"
 
 
 async def parser_start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -81,13 +83,13 @@ async def parser_start_handler(update: Update, context: ContextTypes.DEFAULT_TYP
                    "Во избежании всяких блокировок - не надо одну и ту же ссылку "
                    "отправлять несколько раз до ответа 🙄")
         parse_tiktok.apply_async(args=[decoded_link, update.effective_chat.id])
-        await asyncio.sleep(5)
     else:
         message = 'Ссылка не валидна. Если вы считаете, что это не так - стукните в лс @Flopp'
     await context.bot.send_message(
         update.effective_chat.id,
         text=message
     )
+    await asyncio.sleep(3)
     return await parser_welcome_handler(update, context, redirect=True)
 
 
