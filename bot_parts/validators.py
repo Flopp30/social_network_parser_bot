@@ -28,10 +28,14 @@ class LinkValidator:
 
     @classmethod
     def validate_tiktok_user_link(cls, link) -> bool:
-        pattern = r'^https?://(?:www\.)?tiktok\.com/@\w+(?![?&])$'
+        pattern = r'^https?://(?:www\.)?tiktok\.com/[^?&]+$'
         return re.match(pattern, link) is not None
 
     @classmethod
     def validate_tiktok_music_link(cls, link) -> bool:
         pattern = r'^https?://(?:www\.)?tiktok\.com/music/[\w-]+\-\d+$'
         return re.match(pattern, link) is not None
+
+
+if __name__ == '__main__':
+    print(LinkValidator.validate('https://www.tiktok.com/@danya1.milok'))
