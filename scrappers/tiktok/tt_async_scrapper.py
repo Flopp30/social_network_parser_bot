@@ -130,15 +130,24 @@ class TikTokScrapper:
             sec_uid = await self._get_sec_uid_from_url(url)
             normalized_data = await self._request_user_process(sec_uid)
             file_name = f'user_{sec_uid}.csv'
-
-        logger.info(f'Собрано {len(self.uniq_ids)} уникальных видео')
-        logger.info(f'Всего собрано {len(self.total)} видео')
+        report = (
+            f'Отчет по <code>{url}</code>\n'
+            f'Собрано {len(self.uniq_ids)} уникальных видео'
+            f'\nВсего собрано {len(self.total)} видео\n'
+        )
+        logger.info(report)
         if tg_chat_id:
-            await self._send_report_to_tg(tg_chat_id, normalized_data, file_name)
+            await self._send_report_to_tg(tg_chat_id, normalized_data, file_name, report)
             return
         self._save_to_csv(collected=normalized_data, filename=file_name)
 
-    async def _send_report_to_tg(self, tg_chat_id, normalized_data: list[CollectedItem], file_name='report.csv'):
+    async def _send_report_to_tg(
+            self,
+            tg_chat_id,
+            normalized_data: list[CollectedItem],
+            file_name: str = 'report.csv',
+            report: str = ''
+    ):
         string_io = self.get_string_io(normalized_data)
         csv_data = string_io.getvalue().encode('utf-8')
         files = {
@@ -146,7 +155,7 @@ class TikTokScrapper:
         }
         params = {
             "chat_id": tg_chat_id,
-            "caption": f'Собрано {len(self.uniq_ids)} уникальных видео\nВсего собрано {len(self.total)} видео'
+            "caption": report
         }
         response = None
         try:
@@ -244,6 +253,8 @@ class TikTokScrapper:
         attempt = 0
         async with aiohttp.ClientSession() as session:
             while cursor < cursor_breakpoint and attempt < self.music_attempts:
+                await asyncio.sleep(random.randint(1, 5))
+
                 logger.debug(f'Parse. Start: {cursor}; Breakpoint: {cursor_breakpoint}')
                 params |= {"cursor": cursor}
 
