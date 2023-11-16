@@ -178,7 +178,7 @@ LOGGING = {
         'base_log_warning': {
             'level': 'WARNING',
             'class': 'logging.handlers.TimedRotatingFileHandler',
-            'filename': env('BASE_LOG', './django-base.log'),
+            'filename': env('BASE_LOG', './logs/django-base.log'),
             'when': 'MIDNIGHT',
             'backupCount': 7,
             'formatter': 'verbose',
