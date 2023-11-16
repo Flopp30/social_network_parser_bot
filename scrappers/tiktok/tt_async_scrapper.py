@@ -131,8 +131,7 @@ class TikTokScrapper:
             )
             file_name = f'music_report.csv'
         else:
-            sec_uid = await self._get_sec_uid_from_url(url)
-            normalized_data = await self._request_user_process(sec_uid)
+            normalized_data = await self._request_user_process(url)
             file_name = f'user_report.csv'
         report = (
             f'Отчет по {url} \n'
@@ -173,10 +172,11 @@ class TikTokScrapper:
             logger.error(e)
             self.task_result = "With an error"
 
-    async def _request_user_process(self, sec_uid) -> list[CollectedItem]:
+    async def _request_user_process(self, url) -> list[CollectedItem]:
         collected_items = []
         cursor = 0
         attempt = 0
+        sec_uid = await self._get_sec_uid_from_url(url)
         while attempt < self.user_attempts:
             serialized_data = await self._scrape_user_page(sec_uid, cursor) or {}
             for item in serialized_data.get('itemList', []):
@@ -186,6 +186,7 @@ class TikTokScrapper:
             if not serialized_data.get('hasMore'):
                 attempt += 1
                 logger.debug(f'Limit: {cursor}')
+                sec_uid = await self._get_sec_uid_from_url(url)
                 await asyncio.sleep(random.randint(5, 10))
                 continue
 
@@ -293,7 +294,6 @@ class TikTokScrapper:
             logger.error(e)
             self.task_result = "With an error"
             return None
-
 
     async def _get_sec_uid_from_url(self, url: str) -> str | None:
         try:
