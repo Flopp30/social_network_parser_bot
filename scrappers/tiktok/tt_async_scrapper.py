@@ -102,6 +102,8 @@ class TikTokScrapper:
 
     @timer
     async def run(self, url: str, tg_chat_id: int = None):
+        normalized_data = []
+        report = ''
         if 'music' in url:
             music_id = int(url.split('-')[-1].replace('/', ''))
             cursors = [i for i in range(0, 5001, 500)]
@@ -131,9 +133,16 @@ class TikTokScrapper:
             )
             file_name = f'music_report.csv'
         else:
-            normalized_data = await self._request_user_process(url)
+            sec_uid = await self._get_sec_uid_from_url(url)
+            if sec_uid:
+                normalized_data = await self._request_user_process(sec_uid)
+            else:
+                report += (
+                    'Не смог получить уникальный идентификатор пользователя со страницы.'
+                    '\nИмеет смысл повторить запрос или через какое-то время\n\n'
+                )
             file_name = f'user_report.csv'
-        report = (
+        report += (
             f'Отчет по {url} \n'
             f'Собрано {len(self.uniq_ids)} уникальных видео'
             f'\nВсего собрано {len(self.total)} видео\n'
@@ -172,11 +181,10 @@ class TikTokScrapper:
             logger.error(e)
             self.task_result = "With an error"
 
-    async def _request_user_process(self, url) -> list[CollectedItem]:
+    async def _request_user_process(self, sec_uid) -> list[CollectedItem]:
         collected_items = []
         cursor = 0
         attempt = 0
-        sec_uid = await self._get_sec_uid_from_url(url)
         while attempt < self.user_attempts:
             serialized_data = await self._scrape_user_page(sec_uid, cursor) or {}
             for item in serialized_data.get('itemList', []):
@@ -296,26 +304,31 @@ class TikTokScrapper:
             return None
 
     async def _get_sec_uid_from_url(self, url: str) -> str | None:
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url) as response:
-                    if not response.status == 200:
-                        logger.error(f"Failed to get page content from {url}. Status code: {response.status}")
-                        return None
+        sec_uid = None
+        attempt = 0
+        while not sec_uid or attempt < 5:
+            try:
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(url) as response:
+                        if not response.status == 200:
+                            logger.error(f"Failed to get page content from {url}. Status code: {response.status}")
+                            return None
 
-                    content = await response.text()
-        except Exception as e:
-            logger.error(e)
-            self.task_result = "With an error"
-            content = ""
-        pattern = r'"secUid":"(.*?)"'
-        if (match := re.search(pattern, content)):
-            sec_uid = match.group(1)
-            return sec_uid
-        else:
+                        content = await response.text()
+            except Exception as e:
+                logger.error(e)
+                self.task_result = "With an error"
+                content = ""
+            pattern = r'"secUid":"(.*?)"'
+            if (match := re.search(pattern, content)):
+                sec_uid = match.group(1)
+                return sec_uid
+            attempt += 1
+            await asyncio.sleep(3)
+
+        if not sec_uid:
             logger.error(f"Failed to find secUid on the page from url {url}.")
-            self.task_result = "With an error"
-            return None
+        return None
 
     def _parse_collected_from_json(self, json_item: dict) -> CollectedItem | None:
         author_id = json_item.get('author', {}).get('uniqueId')
