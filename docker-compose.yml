@@ -71,8 +71,6 @@ services:
       - .env
     environment:
       DJ_DEBUG: "True"
-      DJ_ALLOWED_HOSTS: '127.0.0.1,localhost'
-      DJ_CSRF_TRUSTED_ORIGINS: 'http://127.0.0.1:8000'
     depends_on:
       - signature
       - redis
