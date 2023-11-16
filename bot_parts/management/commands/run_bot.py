@@ -91,7 +91,7 @@ async def parser_start_handler(update: Update, context: ContextTypes.DEFAULT_TYP
         update.effective_chat.id,
         text=message
     )
-    parse_tiktok.apply_async(args=[decoded_link, update.effective_chat.id])
+    await parse_tiktok.apply_async(args=[decoded_link, update.effective_chat.id])
     return await parser_welcome_handler(update, context)
 
 

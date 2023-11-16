@@ -14,7 +14,7 @@ BOT_MODE = env('BOT_MODE', 'callback')  # webhook in other case
 # Scrappers definition
 TT_SIGNATURE_URL = env('TT_SIGNATURE_URL')
 TT_MUSIC_ERROR_ATTEMPTS = env('TT_MUSIC_ERROR_ATTEMPTS', 3)
-TT_USER_ERROR_ATTEMPTS = env('TT_USER_ERROR_ATTEMPTS', 5)
+TT_USER_ERROR_ATTEMPTS = env('TT_USER_ERROR_ATTEMPTS', 3)
 
 # Django definition
 BASE_DIR = Path(__file__).resolve().parent.parent
