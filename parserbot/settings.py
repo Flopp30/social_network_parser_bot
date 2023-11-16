@@ -118,3 +118,121 @@ CELERY_BROKER = env('CELERY_BROKER')
 CELERY_BACKEND = env('CELERY_BACKEND')
 CELERY_IMPORTS = ('parserbot.tasks',)
 CELERY_RESULT_BACKEND = 'django-db'
+
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{asctime} {levelname} {name} | {filename}>{funcName}():{lineno} | {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{asctime} {levelname} {module} {message}',
+            'style': '{',
+        },
+    },
+    'filters': {
+        'require_debug_true': {
+            '()': 'django.utils.log.RequireDebugTrue',
+        },
+        'require_debug_false': {
+            '()': 'django.utils.log.RequireDebugFalse',
+        }
+    },
+    'handlers': {
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+        # 'mail_admins': {
+        #     'level': 'ERROR',
+        #     'class': 'django.utils.log.AdminEmailHandler',
+        #     'include_html': True,
+        #     'filters': ['require_debug_false']
+        # },
+        'debug_file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': env('DEBUG_LOG', './logs/django-debug.log'),
+            'filters': ['require_debug_true']
+        },
+        'errors_file': {
+            'level': 'ERROR',
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'filename': env('ERROR_LOG', './logs/django-error.log'),
+            'when': 'MIDNIGHT',
+            'backupCount': 7,
+            'formatter': 'verbose',
+        },
+        'base_log': {
+            'level': 'INFO',
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'filename': env('BASE_LOG', './logs/django-base.log'),
+            'when': 'MIDNIGHT',
+            'backupCount': 7,
+            'formatter': 'verbose',
+        },
+        'base_log_warning': {
+            'level': 'WARNING',
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'filename': env('BASE_LOG', './django-base.log'),
+            'when': 'MIDNIGHT',
+            'backupCount': 7,
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'django.security.DisallowedHost': {
+            'handlers': ['console', 'errors_file', 'base_log'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'django': {
+            'handlers': ['console', 'errors_file', 'base_log'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'django.db': {
+            'level': 'INFO',
+            'handlers': ['console'],
+            'propagate': True,
+        },
+        'django.server': {
+            'level': 'INFO',
+            'handlers': ['console', 'base_log_warning'],
+            'propagate': False,
+        },
+        'celery': {
+            'handlers': ['console', 'errors_file', 'base_log'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'tiktok_scrapper': {
+            'handlers': ['console', 'errors_file', 'base_log'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        '': {
+            'level': 'INFO',
+            'handlers': ['console', 'base_log', 'errors_file'],
+            'propagate': True,
+        }
+    }
+}
+
+# if DEBUG:
+#     LOGGING['handlers']['errors_file'] = {
+#         'class': 'logging.NullHandler'
+#     }
+#     LOGGING['handlers']['base_log'] = {
+#         'class': 'logging.NullHandler'
+#     }
+#     LOGGING['handlers']['base_log_warning'] = {
+#         'class': 'logging.NullHandler'
+#     }
+#     LOGGING['handlers']['debug_file'] = {
+#         'class': 'logging.NullHandler'
+#     }

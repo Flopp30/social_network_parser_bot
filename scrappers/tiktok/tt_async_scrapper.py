@@ -20,11 +20,6 @@ from scrappers.tiktok.request_params.models import SCRAPPER_TIKTOK_SETTINGS
 from scrappers.tiktok.request_params.settings_instances import *
 
 logger = logging.getLogger('tiktok_scrapper')
-logger.setLevel(logging.DEBUG)
-console_handler = logging.StreamHandler()
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-console_handler.setFormatter(formatter)
-logger.addHandler(console_handler)
 
 CONSTANT_USER_API_URL = """
      https://www.tiktok.com/api/post/item_list/
@@ -232,7 +227,7 @@ class TikTokScrapper:
                     return None
 
         if not (tt_params := serialized_data.get('data', {}).get('x-tt-params')):
-            logger.error(f'tt_params not found in {serialized_data}')
+            logger.warning(f'tt_params not found in {serialized_data}')
             self.task_result = "With an error"
             return None
         headers = {
