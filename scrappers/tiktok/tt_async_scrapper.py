@@ -9,6 +9,7 @@ import re
 import time
 from datetime import datetime
 from json import JSONDecodeError
+from pathlib import Path
 from urllib.parse import urlencode
 
 import aiohttp
@@ -62,7 +63,7 @@ CollectedItem = dict[str:str]
 try:
     TT_SIGNATURE_URL = settings.TT_SIGNATURE_URL
 except Exception:
-    TT_SIGNATURE_URL = 'http://localhost/signature'
+    TT_SIGNATURE_URL = 'http://localhost:8080/signature'
 
 
 def timer(func):
@@ -83,8 +84,10 @@ class TikTokScrapper:
     user_fake_api_url = "https://m.tiktok.com/api/post/item_list/?"
     user_api_url = CONSTANT_USER_API_URL
     configs = SCRAPPER_TIKTOK_SETTINGS
-
-    tg_api_send_doc_url = f"https://api.telegram.org/bot{settings.TELEGRAM_TOKEN}/sendDocument"
+    try:
+        tg_api_send_doc_url = f"https://api.telegram.org/bot{settings.TELEGRAM_TOKEN}/sendDocument"
+    except Exception:
+        tg_api_send_doc_url = ''
 
     def __init__(self):
         self.uniq_ids = set()
@@ -125,13 +128,13 @@ class TikTokScrapper:
                 itertools.chain.from_iterable(
                     (task.result() for task in tasks if task.done()))
             )
-            file_name = f'music_{music_id}.csv'
+            file_name = f'music_report.csv'
         else:
             sec_uid = await self._get_sec_uid_from_url(url)
             normalized_data = await self._request_user_process(sec_uid)
-            file_name = f'user_{sec_uid}.csv'
+            file_name = f'user_report.csv'
         report = (
-            f'Отчет по <code>{url}</code>\n'
+            f'Отчет по {url} \n'
             f'Собрано {len(self.uniq_ids)} уникальных видео'
             f'\nВсего собрано {len(self.total)} видео\n'
         )
@@ -254,7 +257,6 @@ class TikTokScrapper:
         async with aiohttp.ClientSession() as session:
             while cursor < cursor_breakpoint and attempt < self.music_attempts:
                 await asyncio.sleep(random.randint(1, 5))
-
                 logger.debug(f'Parse. Start: {cursor}; Breakpoint: {cursor_breakpoint}')
                 params |= {"cursor": cursor}
 
@@ -332,9 +334,10 @@ class TikTokScrapper:
         }
 
     @staticmethod
-    def _save_to_csv(collected: list[CollectedItem], file_path: str = '', filename: str = 'report.csv'):
+    def _save_to_csv(collected: list[CollectedItem], filename: str = 'report.csv'):
+        file_path = Path(__file__).resolve().parent / filename
         fieldnames = ['link', 'upload', 'description', 'duration', 'views', 'likes', 'comments', 'resend', 'saves']
-        with open(f'{file_path}{filename}', 'w', newline='') as f:
+        with open(file_path, 'w', newline='') as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames)
             writer.writeheader()
             writer.writerows(collected)
@@ -360,5 +363,5 @@ class TikTokScrapper:
 
 if __name__ == '__main__':
     scrapper = TikTokScrapper()
-    # asyncio.run(scrapper.run('https://www.tiktok.com/@domixx007'))
+    asyncio.run(scrapper.run('https://www.tiktok.com/@domixx007'))
     # asyncio.run(scrapper.run('https://www.tiktok.com/music/Scary-Garry-6914598970259490818'))
