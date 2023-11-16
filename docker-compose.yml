@@ -88,7 +88,7 @@ services:
   nginx:
     image: nginx
     ports:
-      - '8000:80'
+      - '80:80'
     environment:
       UPSTREAM_SERVER: parserbot-admin:8000
     volumes:

@@ -50,8 +50,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def parser_welcome_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not update.callback_query:
-        return 'AWAIT_WELCOME_CHOICE'
+    # if not update.callback_query:
+    #     return 'AWAIT_WELCOME_CHOICE'
     await check_bot_context(update, context)
     message = (
         "Отправь ссылку для парсинга\n"
@@ -91,7 +91,7 @@ async def parser_start_handler(update: Update, context: ContextTypes.DEFAULT_TYP
         update.effective_chat.id,
         text=message
     )
-    await parse_tiktok.apply_async(args=[decoded_link, update.effective_chat.id])
+    parse_tiktok.apply_async(args=[decoded_link, update.effective_chat.id])
     return await parser_welcome_handler(update, context)
 
 

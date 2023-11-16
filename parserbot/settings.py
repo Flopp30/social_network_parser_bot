@@ -116,5 +116,3 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CELERY_BROKER = env('CELERY_BROKER')
 CELERY_BACKEND = env('CELERY_BACKEND')
 CELERY_IMPORTS = ('parserbot.tasks',)
-# REDIS_HOST = env('REDIS_HOST')
-# REDIS_PORT = env('REDIS_PORT')
