@@ -92,6 +92,7 @@ class TikTokScrapper:
     def __init__(self):
         self.uniq_ids = set()
         self.total = list()
+        self.task_result = "SUCCESS"
         try:
             self.user_attempts = settings.TT_USER_ERROR_ATTEMPTS
             self.music_attempts = settings.TT_MUSIC_ERROR_ATTEMPTS
@@ -141,8 +142,9 @@ class TikTokScrapper:
         logger.info(report)
         if tg_chat_id:
             await self._send_report_to_tg(tg_chat_id, normalized_data, file_name, report)
-            return
+            return self.task_result
         self._save_to_csv(collected=normalized_data, filename=file_name)
+        return self.task_result
 
     async def _send_report_to_tg(
             self,
@@ -169,6 +171,7 @@ class TikTokScrapper:
         except Exception as e:
             logger.error(response.__dict__)
             logger.error(e)
+            self.task_result = "With an error"
 
     async def _request_user_process(self, sec_uid) -> list[CollectedItem]:
         collected_items = []
@@ -217,10 +220,12 @@ class TikTokScrapper:
                     serialized_data = await response.json()
                 except JSONDecodeError:
                     logger.error('Error in the response from the internal service (signer)')
+                    self.task_result = "With an error"
                     return None
 
         if not (tt_params := serialized_data.get('data', {}).get('x-tt-params')):
             logger.error(f'tt_params not found in {serialized_data}')
+            self.task_result = "With an error"
             return None
         headers = {
             "x-tt-params": tt_params,
@@ -234,6 +239,7 @@ class TikTokScrapper:
             response.raise_for_status()
         except Exception as e:
             logger.error(e)
+            self.task_result = "With an error"
             return None
 
         try:
@@ -275,8 +281,7 @@ class TikTokScrapper:
                 cursor = int(serialized_data.get('cursor'))
         return collected_items
 
-    @staticmethod
-    async def _async_get_request(session, url, headers, cookies, params) -> dict | None:
+    async def _async_get_request(self, session, url, headers, cookies, params) -> dict | None:
         try:
             async with session.get(url, headers=headers, cookies=cookies, params=params) as response:
                 response.raise_for_status()
@@ -286,10 +291,11 @@ class TikTokScrapper:
                 return await response.json()
         except Exception as e:
             logger.error(e)
+            self.task_result = "With an error"
             return None
 
-    @staticmethod
-    async def _get_sec_uid_from_url(url: str) -> str | None:
+
+    async def _get_sec_uid_from_url(self, url: str) -> str | None:
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(url) as response:
@@ -300,6 +306,7 @@ class TikTokScrapper:
                     content = await response.text()
         except Exception as e:
             logger.error(e)
+            self.task_result = "With an error"
             content = ""
         pattern = r'"secUid":"(.*?)"'
         if (match := re.search(pattern, content)):
@@ -307,6 +314,7 @@ class TikTokScrapper:
             return sec_uid
         else:
             logger.error(f"Failed to find secUid on the page from url {url}.")
+            self.task_result = "With an error"
             return None
 
     def _parse_collected_from_json(self, json_item: dict) -> CollectedItem | None:

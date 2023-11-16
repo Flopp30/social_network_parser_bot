@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from django.conf import settings
@@ -49,9 +50,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return STATE
 
 
-async def parser_welcome_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # if not update.callback_query:
-    #     return 'AWAIT_WELCOME_CHOICE'
+async def parser_welcome_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, **kwargs):
+    if not update.callback_query or not kwargs.get('redirect'):
+        return 'AWAIT_WELCOME_CHOICE'
     await check_bot_context(update, context)
     message = (
         "Отправь ссылку для парсинга\n"
@@ -73,26 +74,23 @@ async def parser_welcome_handler(update: Update, context: ContextTypes.DEFAULT_T
 
 async def parser_start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await check_bot_context(update, context)
-    if not (decoded_link := LinkValidator.validate(update.message.text)):
+    if (decoded_link := LinkValidator.validate(update.message.text)):
+        message = ("Ссылка прошла валидацию, приступил к парсингу, ожидайте.\n "
+                   "Средняя скорость:\n"
+                   "    - Музыка: 150-200 видео/сек\n"
+                   "    - Юзер: 20-30 видео/сек.\n"
+                   "Бот в любом случае вернет какой-то ответ. "
+                   "Во избежании всяких блокировок - не надо одну и ту же ссылку "
+                   "отправлять несколько раз до ответа 🙄")
+        parse_tiktok.apply_async(args=[decoded_link, update.effective_chat.id])
+        await asyncio.sleep(5)
+    else:
         message = 'Ссылка не валидна. Если вы считаете, что это не так - стукните в лс @Flopp'
-        await context.bot.send_message(
-            update.effective_chat.id,
-            text=message
-        )
-        return await parser_welcome_handler(update, context)
-    message = ("Ссылка прошла валидацию, приступил к парсингу, ожидайте.\n "
-               "Средняя скорость:\n"
-               "    - Музыка: 150-200 видео/сек\n"
-               "    - Юзер: 20-30 видео/сек.\n"
-               "Бот в любом случае вернет какой-то ответ. "
-               "Во избежании всяких блокировок - не надо одну и ту же ссылку "
-               "отправлять несколько раз до ответа 🙄")
     await context.bot.send_message(
         update.effective_chat.id,
         text=message
     )
-    parse_tiktok.apply_async(args=[decoded_link, update.effective_chat.id])
-    return await parser_welcome_handler(update, context)
+    return await parser_welcome_handler(update, context, redirect=True)
 
 
 async def user_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):

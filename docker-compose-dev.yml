@@ -1,0 +1,34 @@
+version: '3.7'
+
+services:
+  signature:
+    build:
+      context: .
+      dockerfile: Dockerfile_signature
+    image: tiktok-signature:1.0.0
+    environment:
+      PORT: 8080
+    ports:
+      - 8080:8080
+
+  redis:
+    image: redis:alpine
+    command:
+      - redis-server
+    restart: always
+    ports:
+      - "6379:6379"
+    depends_on:
+      - signature
+
+  celery:
+    build:
+      context: .
+      dockerfile: Dockerfile_celery
+    env_file:
+      - dev.env
+    volumes:
+      - .:/app
+    depends_on:
+      - signature
+      - redis
