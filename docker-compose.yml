@@ -32,6 +32,7 @@ services:
     depends_on:
       - signature
       - redis
+    restart: always
 
   parserbot-bot:
     build:
