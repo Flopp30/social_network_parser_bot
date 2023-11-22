@@ -40,3 +40,4 @@ class LinkValidator:
 if __name__ == '__main__':
     print(LinkValidator.validate('https://www.tiktok.com/@danya1.milok'))
     print(LinkValidator.validate('https://www.tiktok.com/@kingx.music'))
+    print(LinkValidator.validate('https://www.tiktok.com/@ness_opo'))

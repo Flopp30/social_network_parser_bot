@@ -314,7 +314,8 @@ class TikTokScrapper:
             pattern = r'"secUid":"(.*?)"'
             if (match := re.search(pattern, content)):
                 sec_uid = match.group(1)
-                return sec_uid
+                if sec_uid != 'MS4wLjABAAAAv7iSuuXDJGDvJkmH_vz1qkDZYo1apxgzaxdBSeIuPiM':  # @tiktok sec uid
+                    return sec_uid
             attempt += 1
             await asyncio.sleep(3)
 
@@ -337,19 +338,19 @@ class TikTokScrapper:
         return {
             'link': f"https://www.tiktok.com/@{author_id}/video/{video_id}",
             'upload': self._format_timestamp(json_item.get('createTime', '-')),
-            "description": json_item.get('desc'),
             'duration': json_item.get('video', {}).get('duration', '-'),
             'views': stats.get('playCount', '-'),
             'likes': stats.get('diggCount', '-'),
             'comments': stats.get('commentCount', '-'),
             'resend': stats.get('shareCount', '-'),
             'saves': stats.get('collectCount', '-'),
+            "description": json_item.get('desc'),
         }
 
     @staticmethod
     def _save_to_csv(collected: list[CollectedItem], filename: str = 'report.csv'):
         file_path = Path(__file__).resolve().parent / filename
-        fieldnames = ['link', 'upload', 'description', 'duration', 'views', 'likes', 'comments', 'resend', 'saves']
+        fieldnames = ['link', 'upload', 'duration', 'views', 'likes', 'comments', 'resend', 'saves', 'description']
         with open(file_path, 'w', newline='') as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames)
             writer.writeheader()
@@ -376,5 +377,5 @@ class TikTokScrapper:
 
 if __name__ == '__main__':
     scrapper = TikTokScrapper()
-    asyncio.run(scrapper.run('https://www.tiktok.com/@domixx007'))
+    asyncio.run(scrapper.run('https://www.tiktok.com/@ness_opo'))
     # asyncio.run(scrapper.run('https://www.tiktok.com/music/Scary-Garry-6914598970259490818'))
