@@ -134,7 +134,7 @@ class TikTokScrapper:
             else:
                 report += (
                     'Не смог получить уникальный идентификатор пользователя со страницы.'
-                    '\nИмеет смысл повторить запрос или через какое-то время\n\n'
+                    '\nИмеет смысл повторить запрос или через какое-то время попробовать снова\n\n'
                 )
             file_name = f'user_report.csv'
         report += (
@@ -302,11 +302,11 @@ class TikTokScrapper:
         attempt = 0
         while not sec_uid or attempt < 5:
             try:
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(url) as response:
-                        if not response.status == 200:
-                            logger.error(f"Failed to get page content from {url}. Status code: {response.status}")
-                        content = await response.text()
+                async with httpx.AsyncClient() as client:
+                    response = await client.get(url)
+                    if not response.status_code == 200:
+                        logger.error(f"Failed to get page content from {url}. Status code: {response.status_code}")
+                    content = response.text
             except Exception as e:
                 logger.error(e)
                 self.task_result = "With an error"
