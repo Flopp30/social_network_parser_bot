@@ -99,7 +99,7 @@ class TikTokScrapper:
     async def run(self, url: str, tg_chat_id: int = None):
         normalized_data = []
         report = ''
-        if 'music' in url:
+        if 'music' in url.split('/')[:-1]:
             music_id = int(url.split('-')[-1].replace('/', ''))
             cursors = [i for i in range(0, 5001, 500)]
             start_slicer = 0
