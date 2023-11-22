@@ -16,5 +16,5 @@ def parse_tiktok(decoded_link, chat_id):
         res = asyncio.run(scrapper.run(decoded_link, tg_chat_id=chat_id))
     except Exception as e:
         logger.error(e)
-        res = e.__traceback__
+        res = "with error"
     return res
