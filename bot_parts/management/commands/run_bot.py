@@ -75,13 +75,12 @@ async def parser_welcome_handler(update: Update, context: ContextTypes.DEFAULT_T
 async def parser_start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await check_bot_context(update, context)
     if (decoded_link := LinkValidator.validate(update.message.text)):
-        message = ("Ссылка прошла валидацию, приступил к парсингу, ожидайте.\n "
-                   "Средняя скорость:\n"
-                   "    - Музыка: 150-200 видео/сек\n"
-                   "    - Юзер: 20-30 видео/сек.\n"
-                   "Бот в любом случае вернет какой-то ответ. "
-                   "Во избежании всяких блокировок - не надо одну и ту же ссылку "
-                   "отправлять несколько раз до ответа 🙄")
+        message = (
+            "Ссылка прошла валидацию, приступил к парсингу, ожидайте.\n "
+            "Средняя скорость:\n"
+            "    - Музыка: 150-200 видео/сек\n"
+            "    - Юзер: 20-30 видео/сек.\n"
+        )
         parse_tiktok.apply_async(args=[decoded_link, update.effective_chat.id])
     else:
         message = 'Ссылка не валидна. Если вы считаете, что это не так - стукните в лс @Flopp'
@@ -89,7 +88,7 @@ async def parser_start_handler(update: Update, context: ContextTypes.DEFAULT_TYP
         update.effective_chat.id,
         text=message
     )
-    await asyncio.sleep(3)
+    await asyncio.sleep(1)
     return await parser_welcome_handler(update, context, redirect=True)
 
 

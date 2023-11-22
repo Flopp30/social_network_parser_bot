@@ -6,4 +6,4 @@ RUN pip install -r requirements.txt
 # copy project
 COPY . .
 # run celery
-CMD celery -A parserbot worker --loglevel=info --concurrency=2 --prefetch-multiplier=2
+CMD celery -A parserbot worker --loglevel=info --concurrency=3 --prefetch-multiplier=3

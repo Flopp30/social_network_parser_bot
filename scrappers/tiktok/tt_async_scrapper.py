@@ -189,7 +189,7 @@ class TikTokScrapper:
             if not serialized_data.get('hasMore'):
                 attempt += 1
                 logger.debug(f'Limit: {cursor}')
-                await asyncio.sleep(random.randint(5, 10))
+                await asyncio.sleep(random.randint(1, 5))
                 continue
 
             cursor = serialized_data.get('cursor')
@@ -265,7 +265,7 @@ class TikTokScrapper:
         attempt = 0
         async with aiohttp.ClientSession() as session:
             while cursor < cursor_breakpoint and attempt < self.music_attempts:
-                await asyncio.sleep(random.randint(1, 5))
+                await asyncio.sleep(random.randint(1, 3))
                 logger.debug(f'Parse. Start: {cursor}; Breakpoint: {cursor_breakpoint}')
                 params |= {"cursor": cursor}
 
@@ -279,7 +279,6 @@ class TikTokScrapper:
                 if not serialized_data.get('hasMore'):
                     logger.debug(f'Limit: {cursor}')
                     attempt += 1
-                    await asyncio.sleep(random.randint(1, 5))
                     continue
                 cursor = int(serialized_data.get('cursor'))
         return collected_items
@@ -304,9 +303,11 @@ class TikTokScrapper:
             try:
                 async with httpx.AsyncClient() as client:
                     response = await client.get(url)
-                    if not response.status_code == 200:
+                    if response.status_code != 200:
                         logger.error(f"Failed to get page content from {url}. Status code: {response.status_code}")
-                    content = response.text
+                        response.raise_for_status()
+                    else:
+                        content = response.text
             except Exception as e:
                 logger.error(e)
                 self.task_result = "With an error"
@@ -317,7 +318,7 @@ class TikTokScrapper:
                 if sec_uid != 'MS4wLjABAAAAv7iSuuXDJGDvJkmH_vz1qkDZYo1apxgzaxdBSeIuPiM':  # @tiktok sec uid
                     return sec_uid
             attempt += 1
-            await asyncio.sleep(3)
+            await asyncio.sleep(2)
 
         if not sec_uid:
             logger.error(f"Failed to find secUid on the page from url {url}.")
