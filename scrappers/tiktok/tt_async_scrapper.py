@@ -151,12 +151,19 @@ class TikTokScrapper:
 
     async def run_by_user_uuid(self, sec_uid, tg_chat_id=None):
         normalized_data = await self._request_user_process(sec_uid)
+        if normalized_data:
+            report = (
+                f'Отчет по id: {normalized_data[0].get("link").split("video")[0]} \n'
+                f'Собрано {len(self.uniq_ids)} уникальных видео'
+                f'\nВсего собрано {len(self.total)} видео\n'
+            )
+        else:
+            report = (
+                f'Отчет по id: {sec_uid} \n'
+                f'Собрано {len(self.uniq_ids)} уникальных видео'
+                f'\nВсего собрано {len(self.total)} видео\n'
+            )
         file_name = 'user_report.csv'
-        report = (
-            f'Отчет по id: {sec_uid} \n'
-            f'Собрано {len(self.uniq_ids)} уникальных видео'
-            f'\nВсего собрано {len(self.total)} видео\n'
-        )
         logger.info(report)
         if tg_chat_id:
             await self._send_report_to_tg(tg_chat_id, normalized_data, file_name, report)
