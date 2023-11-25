@@ -83,7 +83,7 @@ async def parser_start_handler(update: Update, context: ContextTypes.DEFAULT_TYP
         )
         parse_tiktok.apply_async(args=[decoded_link, update.effective_chat.id])
     elif update.message.text.startswith('MS'):
-        parse_tiktok_by_sec_uid.apply_async(args=[update.message.text, update.effective_chat.id])
+        parse_tiktok_by_sec_uid.apply_async(args=[update.message.text.strip(), update.effective_chat.id])
         message = f'Запущен парсинг по ID: {update.message.text}'
     else:
         message = 'Ссылка не валидна. Если вы считаете, что это не так - стукните в лс @Flopp'
