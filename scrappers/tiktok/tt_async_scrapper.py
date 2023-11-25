@@ -149,6 +149,21 @@ class TikTokScrapper:
         self._save_to_csv(collected=normalized_data, filename=file_name)
         return self.task_result
 
+    async def run_by_user_uuid(self, sec_uid, tg_chat_id=None):
+        normalized_data = await self._request_user_process(sec_uid)
+        file_name = 'user_report.csv'
+        report = (
+            f'Отчет по id: {sec_uid} \n'
+            f'Собрано {len(self.uniq_ids)} уникальных видео'
+            f'\nВсего собрано {len(self.total)} видео\n'
+        )
+        logger.info(report)
+        if tg_chat_id:
+            await self._send_report_to_tg(tg_chat_id, normalized_data, file_name, report)
+            return self.task_result
+        self._save_to_csv(collected=normalized_data, filename=file_name)
+        return self.task_result
+
     async def _send_report_to_tg(
             self,
             tg_chat_id,
@@ -378,5 +393,20 @@ class TikTokScrapper:
 
 if __name__ == '__main__':
     scrapper = TikTokScrapper()
-    asyncio.run(scrapper.run('https://www.tiktok.com/@ness_opo'))
+    # asyncio.run(scrapper.run('https://www.tiktok.com/@phonkmusicxxl'))
+    # asyncio.run(scrapper.run_by_user_uuid(
+    #     sec_uid='MS4wLjABAAAAK2RRK-FRSh8Jj_0SW4Cbq3vXPkEArO9wiVIv2Gn9CpVdSJct_qzmrvvxqGRsY0K6')
+    # )
     # asyncio.run(scrapper.run('https://www.tiktok.com/music/Scary-Garry-6914598970259490818'))
+
+    """
+    https://www.tiktok.com/@rxzxlx._.nation_
+    MS4wLjABAAAAK2RRK-FRSh8Jj_0SW4Cbq3vXPkEArO9wiVIv2Gn9CpVdSJct_qzmrvvxqGRsY0K6
+    
+    https://www.tiktok.com/@djdannys_ 
+    MS4wLjABAAAA9MGBOywKrH9Qd5YU2dx4gRweR19YdFGMjj4dluqFId5ebCKp5rdaWebIZr7JPDLF
+    
+    
+    https://www.tiktok.com/@phonkmusicxxl 
+    MS4wLjABAAAAz2_EHaznmB9JKgkaBgpoBPqKUh73k-eL7eH2netlM4esmWYbcTzIRzsBQMDCxVSo
+    """

@@ -10,13 +10,13 @@ from telegram.ext import (
     MessageHandler,
     CommandHandler,
     filters,
-    ContextTypes,
+    ContextTypes, PrefixHandler,
 )
 
 from bot_parts.helpers import check_bot_context
 from bot_parts.keyboards import START_BOARD
 from bot_parts.validators import LinkValidator
-from parserbot.tasks import parse_tiktok
+from parserbot.tasks import parse_tiktok, parse_tiktok_by_sec_uid
 
 logger = logging.getLogger('tbot')
 job_queue = None
@@ -119,6 +119,18 @@ async def user_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     await context.user_data['user'].asave()
 
 
+async def parse_by_sec_uid(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await check_bot_context(update, context)
+    sec_uid = update.message.text.split(' ')[-1]
+    parse_tiktok_by_sec_uid.apply_async(args=[sec_uid, update.effective_chat.id])
+    message = f'Парсинг по {sec_uid} запущен.'
+    await context.bot.send_message(
+        update.effective_chat.id,
+        text=message
+    )
+    return await parser_welcome_handler(update, context, redirect=True)
+
+
 def main():
     import tracemalloc
     tracemalloc.start()
@@ -127,7 +139,7 @@ def main():
     logger.addHandler(stream_handler)
 
     application = ApplicationBuilder().token(settings.TELEGRAM_TOKEN).build()
-
+    application.add_handler(PrefixHandler('!', ['by_id'], parse_by_sec_uid))
     application.add_handler(CommandHandler('start', user_input_handler))
     application.add_handler(CallbackQueryHandler(user_input_handler))
     application.add_handler(MessageHandler(filters.TEXT, user_input_handler))
