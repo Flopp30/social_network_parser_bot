@@ -8,4 +8,4 @@ requests==2.31.*
 celery==5.3.*
 redis==5.0.*
 django_celery_results==2.5.*
-PyQt5-Qt5
+PyQt5
