@@ -223,16 +223,16 @@ LOGGING = {
     }
 }
 
-# if DEBUG:
-#     LOGGING['handlers']['errors_file'] = {
-#         'class': 'logging.NullHandler'
-#     }
-#     LOGGING['handlers']['base_log'] = {
-#         'class': 'logging.NullHandler'
-#     }
-#     LOGGING['handlers']['base_log_warning'] = {
-#         'class': 'logging.NullHandler'
-#     }
-#     LOGGING['handlers']['debug_file'] = {
-#         'class': 'logging.NullHandler'
-#     }
+if DEBUG:
+    LOGGING['handlers']['errors_file'] = {
+        'class': 'logging.NullHandler'
+    }
+    LOGGING['handlers']['base_log'] = {
+        'class': 'logging.NullHandler'
+    }
+    LOGGING['handlers']['base_log_warning'] = {
+        'class': 'logging.NullHandler'
+    }
+    LOGGING['handlers']['debug_file'] = {
+        'class': 'logging.NullHandler'
+    }
