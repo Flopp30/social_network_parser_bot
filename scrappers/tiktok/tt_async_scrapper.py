@@ -322,6 +322,7 @@ class TikTokScrapper:
         sec_uid = None
         attempt = 0
         while not sec_uid or attempt < 5:
+            attempt += 1
             try:
                 async with httpx.AsyncClient() as client:
                     response = await client.get(url)
@@ -339,7 +340,6 @@ class TikTokScrapper:
                 sec_uid = match.group(1)
                 if sec_uid != 'MS4wLjABAAAAv7iSuuXDJGDvJkmH_vz1qkDZYo1apxgzaxdBSeIuPiM':  # @tiktok sec uid
                     return sec_uid
-            attempt += 1
             await asyncio.sleep(2)
 
         if not sec_uid:
