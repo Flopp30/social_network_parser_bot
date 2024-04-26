@@ -37,7 +37,6 @@ INSTALLED_APPS = [
     # custom
     "bot_parts",
     "user",
-    "django_celery_results",
 ]
 
 MIDDLEWARE = [
@@ -117,7 +116,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CELERY_BROKER = env('CELERY_BROKER')
 CELERY_BACKEND = env('CELERY_BACKEND')
 CELERY_IMPORTS = ('parserbot.tasks',)
-CELERY_RESULT_BACKEND = 'django-db'
 
 
 LOGGING = {

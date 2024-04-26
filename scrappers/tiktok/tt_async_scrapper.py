@@ -10,6 +10,7 @@ import time
 from datetime import datetime
 from json import JSONDecodeError
 from pathlib import Path
+from typing import TypedDict
 from urllib.parse import urlencode
 
 import aiohttp
@@ -17,7 +18,7 @@ import httpx
 import requests
 from django.conf import settings
 from scrappers.tiktok.request_params.models import SCRAPPER_TIKTOK_SETTINGS
-from scrappers.tiktok.request_params.settings_instances import *
+from scrappers.tiktok.request_params.settings_instances import *  # noqa
 
 logger = logging.getLogger('tiktok_scrapper')
 
@@ -53,7 +54,18 @@ CONSTANT_USER_API_URL = """
      &_signature=_02B4Z6wo00001CoOkNwAAIDBCa--cQz5e0wqDpRAAGoE8f
 """.replace("\n", "").replace(" ", "")  # DON'T TOUCH THIS VARIABLE
 
-CollectedItem = dict[str:str]
+
+class CollectedItem(TypedDict):
+    link: str
+    upload: str
+    duration: str
+    views: str
+    likes: str
+    comments: str
+    resend: str
+    saves: str
+    description: str
+
 
 try:
     TT_SIGNATURE_URL = settings.TT_SIGNATURE_URL
@@ -74,11 +86,17 @@ def timer(func):
 
 
 class TikTokScrapper:
+    # ссылка для парсинга музыки
     music_api_url = "https://www.tiktok.com/api/music/item_list/"
+    # ссылка для подписания сигнатуры
     user_signature_url = TT_SIGNATURE_URL
+    # сюда отправляются все запросы для подписания при парсинге юзеров
     user_fake_api_url = "https://m.tiktok.com/api/post/item_list/?"
     user_api_url = CONSTANT_USER_API_URL
+    # список настроек (из SCRAPPER_TIKTOK_SETTINGS)
     configs = SCRAPPER_TIKTOK_SETTINGS
+
+    # зачем тут try except я сейчас хз, выглядит оч плохо, попробовать без него?
     try:
         tg_api_send_doc_url = f"https://api.telegram.org/bot{settings.TELEGRAM_TOKEN}/sendDocument"
     except Exception:
@@ -97,19 +115,27 @@ class TikTokScrapper:
 
     @timer
     async def run(self, url: str, tg_chat_id: int = None):
-        normalized_data = []
-        report = ''
+        """Основной процесс - точка входа"""
+        normalized_data: list[CollectedItem] = []
+        report: str = ''
+        # парсинг музыки
         if 'music' in url.split('/')[:-1]:
+            # вытаскиваем music_id
             music_id = int(url.split('-')[-1].replace('/', ''))
-            cursors = [i for i in range(0, 5001, 500)]
-            start_slicer = 0
-            finish_slicer = len(cursors) // len(self.configs)
+            # курсоры - пагинация. Тут список с шагом в 500
+            cursors: list[int] = [i for i in range(0, 5001, 500)]
+            start_slicer: int = 0
+            finish_slicer: int = len(cursors) // len(self.configs)
             async with asyncio.TaskGroup() as task_group:
+                # собираем задачи для парсинга
                 tasks = []
                 for config in self.configs:
-                    headers = copy.deepcopy(config.headers)
-                    cookies = copy.deepcopy(config.cookies)
-                    params = copy.deepcopy(config.params) | {"musicID": music_id, "from_page": "music"}
+                    # перебираем конфиги и берем их них нужные нам элементы
+                    headers: dict[str:str] = copy.deepcopy(config.headers)
+                    cookies: dict[str:str] = copy.deepcopy(config.cookies)
+                    # прокидываем в query параметры music_id
+                    params: dict[str:str] = copy.deepcopy(config.params) | {"musicID": music_id, "from_page": "music"}
+                    # тут попарно перебираем курсоры и собираем задачи
                     for start_cursor, cursor_breakpoint in zip(
                             cursors[start_slicer:finish_slicer], cursors[start_slicer + 1:finish_slicer + 1]
                     ):
@@ -120,16 +146,24 @@ class TikTokScrapper:
                         )
                     start_slicer = finish_slicer
                     finish_slicer += finish_slicer
+                    # фикс для последней итерации
                     if finish_slicer > len(cursors):
                         finish_slicer = len(cursors) - 1
+
+            # запускаем процесс парсинга музыки и сохраняем результат
             normalized_data = list(
                 itertools.chain.from_iterable(
                     (task.result() for task in tasks if task.done()))
             )
             file_name = f'music_report.csv'
         else:
-            sec_uid = await self._get_sec_uid_from_url(url)
+            # процесс парсинга аккаунта (страницы пользователя)
+            # т.к. требует подписания сигнатуры, асинхронно собирать не получается (помню, что была какая-то проблема, но не помню почему)
+
+            # получаем уникальный идентификатор пользователя (просто запросом со страницы
+            sec_uid: str | None = await self._get_sec_uid_from_url(url)
             if sec_uid:
+                # если он есть - запускаем процесс парсинга
                 normalized_data = await self._request_user_process(sec_uid)
             else:
                 report += (
@@ -143,13 +177,18 @@ class TikTokScrapper:
             f'\nВсего собрано {len(self.total)} видео\n'
         )
         logger.info(report)
+        # если передан tg chat id, то отправляем в стриме
         if tg_chat_id:
             await self._send_report_to_tg(tg_chat_id, normalized_data, file_name, report)
             return self.task_result
+
+        # иначе сохраняем в csv (используется для ручного тестирования в основном)
         self._save_to_csv(collected=normalized_data, filename=file_name)
         return self.task_result
 
     async def run_by_user_uuid(self, sec_uid, tg_chat_id=None):
+        """Метод, который выполняет полный цикл парсинга аккаунта (вызывается отдельно, не через run)"""
+        # NOTE по сути был добавлен, потому что в какой-то момент парсили видео по sec uid (а не через ссылку, как сейчас)
         normalized_data = await self._request_user_process(sec_uid)
         if normalized_data:
             report = (
@@ -178,6 +217,7 @@ class TikTokScrapper:
             file_name: str = 'report.csv',
             report: str = ''
     ):
+        """Отправляет отчет в tg"""
         string_io = self.get_string_io(normalized_data)
         csv_data = string_io.getvalue().encode('utf-8')
         files = {
@@ -199,7 +239,8 @@ class TikTokScrapper:
             self.task_result = "With an error"
 
     async def _request_user_process(self, sec_uid) -> list[CollectedItem]:
-        collected_items = []
+        """Парсит страницу пользователя (по sec_uid) и возвращает список собранных данных"""
+        collected_items: list[CollectedItem] = []
         cursor = 0
         attempt = 0
         while attempt < self.user_attempts:
@@ -234,6 +275,7 @@ class TikTokScrapper:
             "secUid": sec_uid,
             "cursor": cursor
         }
+        # подписываем сигнатуру через fake_url
         fake_user_url = self.user_fake_api_url + urlencode(params)
         async with aiohttp.ClientSession() as session:
             async with session.post(
@@ -247,12 +289,13 @@ class TikTokScrapper:
                     logger.error('Error in the response from the internal service (signer)')
                     self.task_result = "With an error"
                     return None
-
+        # получаем x-tt-params (то, ради чего вообще сигнатура подключена)
         if not (tt_params := serialized_data.get('data', {}).get('x-tt-params')):
             logger.warning(f'tt_params not found in {serialized_data}')
             self.task_result = "With an error"
             return None
-        headers = {
+        # здесь конкретный ua нужен
+        headers: dict[str:str] = {
             "x-tt-params": tt_params,
             'user-agent': (
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -260,6 +303,7 @@ class TikTokScrapper:
             ),
         }
         try:
+            # отправляется обычный медленный get запроса, потому что в любой другой конфигурации возвращается пустой ответ :(
             response = requests.get(CONSTANT_USER_API_URL, headers=headers)
             response.raise_for_status()
         except Exception as e:
@@ -282,6 +326,7 @@ class TikTokScrapper:
             start_cursor: int,
             cursor_breakpoint: int,
     ) -> list[CollectedItem]:
+        """Метод парсинга музыки. Принимает курсор и возвращает список собранных данных"""
         collected_items = []
         cursor = start_cursor
         attempt = 0
@@ -306,6 +351,7 @@ class TikTokScrapper:
         return collected_items
 
     async def _async_get_request(self, session, url, headers, cookies, params) -> dict | None:
+        """Метод для отправки асинхронного гет запроса (с вложенной логикой обновления токенов и отлова ошибок"""
         try:
             async with session.get(url, headers=headers, cookies=cookies, params=params) as response:
                 response.raise_for_status()
@@ -319,6 +365,7 @@ class TikTokScrapper:
             return None
 
     async def _get_sec_uid_from_url(self, url: str) -> str | None:
+        """Пытается получить уникальный идентификатор пользователя со страницы"""
         sec_uid = None
         attempt = 0
         while not sec_uid or attempt < 5:
@@ -335,9 +382,10 @@ class TikTokScrapper:
                 self.task_result = "With an error"
                 content = ""
             pattern = r'"secUid":"(.*?)"'
-            if (match := re.search(pattern, content)):
+            if match := re.search(pattern, content):
                 sec_uid = match.group(1)
-                if sec_uid != 'MS4wLjABAAAAv7iSuuXDJGDvJkmH_vz1qkDZYo1apxgzaxdBSeIuPiM':  # @tiktok sec uid
+                # тут был кейс, когда отправляли запросы, а вместо нормального id пользователя возвращался id @tiktok
+                if sec_uid != 'MS4wLjABAAAAv7iSuuXDJGDvJkmH_vz1qkDZYo1apxgzaxdBSeIuPiM':  # ignored @tiktok sec uid
                     return sec_uid
             attempt += 1
             await asyncio.sleep(2)
@@ -347,6 +395,7 @@ class TikTokScrapper:
         return None
 
     def _parse_collected_from_json(self, json_item: dict) -> CollectedItem | None:
+        """Вытаскивает из полученного json объекта информацию о видео"""
         author_id = json_item.get('author', {}).get('uniqueId')
         video_id = json_item.get('id')
         stats = json_item.get('stats')
@@ -358,39 +407,41 @@ class TikTokScrapper:
             logger.info(f'Duplicated item: {author_id}@{video_id}')
             return None
         self.uniq_ids.add(f"{author_id}@{video_id}")
-        return {
-            'link': f"https://www.tiktok.com/@{author_id}/video/{video_id}",
-            'upload': self._format_timestamp(json_item.get('createTime', '-')),
-            'duration': json_item.get('video', {}).get('duration', '-'),
-            'views': stats.get('playCount', '-'),
-            'likes': stats.get('diggCount', '-'),
-            'comments': stats.get('commentCount', '-'),
-            'resend': stats.get('shareCount', '-'),
-            'saves': stats.get('collectCount', '-'),
-            "description": json_item.get('desc'),
-        }
+        return CollectedItem(
+            link=f"https://www.tiktok.com/@{author_id}/video/{video_id}",
+            upload=self._format_timestamp(json_item.get('createTime', '-')),
+            duration=json_item.get('video', {}).get('duration', '-'),
+            views=stats.get('playCount', '-'),
+            likes=stats.get('diggCount', '-'),
+            comments=stats.get('commentCount', '-'),
+            resend=stats.get('shareCount', '-'),
+            saves=stats.get('collectCount', '-'),
+            description=json_item.get('desc'),
+        )
 
     @staticmethod
     def _save_to_csv(collected: list[CollectedItem], filename: str = 'report.csv'):
+        """Сохраняет в csv файл"""
         file_path = Path(__file__).resolve().parent / filename
         fieldnames = ['link', 'upload', 'duration', 'views', 'likes', 'comments', 'resend', 'saves', 'description']
         with open(file_path, 'w', newline='') as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames)
             writer.writeheader()
-            writer.writerows(collected)
+            writer.writerows(collected)  # type:ignore
 
     @staticmethod
     def get_string_io(collected: list[CollectedItem]) -> io:
+        """Возвращает стрим строки с данными"""
         fieldnames = ['link', 'upload', 'description', 'duration', 'views', 'likes', 'comments', 'resend', 'saves']
         output = io.StringIO()
         writer = csv.DictWriter(output, fieldnames=fieldnames)
         writer.writeheader()
-        writer.writerows(collected)
+        writer.writerows(collected)  # type: ignore
         output.seek(0)
         return output
 
     @staticmethod
-    def _format_timestamp(timestamp):
+    def _format_timestamp(timestamp) -> str:
         try:
             dt = datetime.fromtimestamp(int(timestamp))
             return dt.strftime('%Y-%m-%d %H:%M:%S')

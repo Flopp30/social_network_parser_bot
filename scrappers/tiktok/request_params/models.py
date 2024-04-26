@@ -1,7 +1,10 @@
+# Список созданных настроек
+# FIXME не самая хорошая реализация, но трогать я её не советую
 SCRAPPER_TIKTOK_SETTINGS = []
 
 
 class TikTokScrapperConfig:
+    """Объект настроек для парсера"""
     def __init__(
             self,
             ms_token: str,
@@ -12,17 +15,17 @@ class TikTokScrapperConfig:
             headers: dict[str:str],
             is_available: bool = True,
     ):
-        self.msToken = ms_token
-        self.X_Bogus = x_bogus
-        self.signature = signature
-        self.cookies = cookies | {
+        self.msToken: str = ms_token
+        self.X_Bogus: str = x_bogus
+        self.signature: str = signature
+        self.cookies: dict[str:str] = cookies | {
             'msToken': ms_token,
         }
-        self.params = params | {
+        self.params: dict[str:str] = params | {
             'msToken': ms_token,
             'X-Bogus': x_bogus,
             '_signature': signature,
         }
-        self.headers = headers
-        self.is_available = is_available
+        self.headers: dict[str:str] = headers
+        self.is_available: bool = is_available
         SCRAPPER_TIKTOK_SETTINGS.append(self)

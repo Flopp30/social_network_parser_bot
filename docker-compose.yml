@@ -9,7 +9,7 @@ services:
     environment:
       PORT: 8080
     ports:
-      - 8080:8080
+      - "127.0.0.1:8080:8080"
 
   redis:
     image: redis:alpine
@@ -17,7 +17,7 @@ services:
       - redis-server
     restart: always
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     depends_on:
       - signature
 

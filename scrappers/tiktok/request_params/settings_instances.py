@@ -1,3 +1,10 @@
+"""
+Тут лежат настройки под разные браузеры (чтобы запросы эмулировать полностью).
+Что происходит: импортируется TikTokScrapperConfig и создаются его инстансы под каждый тип настроек.
+В конце __init__ этот instance добавляется в SCRAPPER_TIKTOK_SETTINGS (список настроек)
+Используются во время парсинга музыки.
+"""
+
 from scrappers.tiktok.request_params.models import TikTokScrapperConfig
 
 iphone_mozilla_settings = TikTokScrapperConfig(
