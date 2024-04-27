@@ -15,8 +15,8 @@ from telegram.ext import (
 
 from bot_parts.helpers import check_bot_context
 from bot_parts.keyboards import START_BOARD
-from bot_parts.validators import LinkValidator
-from parserbot.tasks import parse_tiktok, parse_tiktok_by_sec_uid
+from common.validators import LinkValidator
+from parserbot.tasks import parse_tiktok, parse_tiktok_by_sec_uid, parse_yt_music_link
 
 logger = logging.getLogger('tbot')
 job_queue = None
@@ -55,13 +55,12 @@ async def parser_welcome_handler(update: Update, context: ContextTypes.DEFAULT_T
         await check_bot_context(update, context)
         message = (
             "Отправь ссылку для парсинга\n"
-            "Умею: tik-tok (user, music).\n"
-            "Чтобы избежать проблем:\n"
-            "   - Ссылка должны быть максимально чистой.\n"
-            "   - Не надо кидать ссылки не на тот ресурс, пожалуйста.\n"
+            "Умею:\n"
+            "   - Tik-tok: user, music.\n"
+            "   - Youtube: music.\n"
             "Примеры:\n<code>https://www.tiktok.com/@domixx007</code> \n\n"
             "<code>https://www.tiktok.com/music/Scary-Garry-6914598970259490818</code>\n\n"
-            "Я оконечно обложил все валидацией, но давайте не будем испытывать судьбу 😉"
+            "<code>https://www.youtube.com/source/ZmKk4krdy84/shorts</code>\n\n"
         )
         await context.bot.send_message(
             update.effective_chat.id,
@@ -74,19 +73,19 @@ async def parser_welcome_handler(update: Update, context: ContextTypes.DEFAULT_T
 
 async def parser_start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await check_bot_context(update, context)
-    if (decoded_link := LinkValidator.validate(update.message.text)):
-        message = (
-            "Ссылка прошла валидацию, приступил к парсингу, ожидайте.\n "
-            "Средняя скорость:\n"
-            "    - Музыка: 150-200 видео/сек\n"
-            "    - Юзер: 20-30 видео/сек.\n"
-        )
-        parse_tiktok.apply_async(args=[decoded_link, update.effective_chat.id])
+
+    if decoded_link := LinkValidator.validate(update.message.text):
+        message = "Ссылка прошла валидацию, задача на парсинг поставлена.\n "
+        if 'tiktok' in decoded_link:
+            parse_tiktok.apply_async(args=[decoded_link, update.effective_chat.id])
+        elif 'youtube' in decoded_link:
+            parse_yt_music_link.apply_async(args=[decoded_link, update.effective_chat.id])
     elif update.message.text.startswith('MS'):
         parse_tiktok_by_sec_uid.apply_async(args=[update.message.text.strip(), update.effective_chat.id])
         message = f'Запущен парсинг по ID: {update.message.text}'
     else:
         message = 'Ссылка не валидна. Если вы считаете, что это не так - стукните в лс @Flopp'
+
     await context.bot.send_message(
         update.effective_chat.id,
         text=message

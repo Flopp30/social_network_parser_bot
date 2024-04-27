@@ -18,7 +18,7 @@
    ```
    .env нужно поправить
    ```env
-   TT_SIGNATURE_URL=http://127.0.0.1:8000/signature
+   TT_SIGNATURE_URL=http://127.0.0.1:8080/signature
    CELERY_BROKER=redis://127.0.0.1:6379/0
    CELERY_BACKEND=redis://127.0.0.1:6379/0
    ```

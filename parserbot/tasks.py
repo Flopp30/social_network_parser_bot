@@ -3,17 +3,17 @@ import logging
 
 from celery import shared_task
 
-from scrappers.tiktok.tt_async_scrapper import TikTokScrapper
+from scrappers.tiktok.scrapper import TikTokScrapper
+from scrappers.youtube.scrapper import YoutubeScrapper
 
-
-logger = logging.getLogger('tiktok_scrapper')
+logger = logging.getLogger('scrappers')
 
 
 @shared_task
 def parse_tiktok(decoded_link, chat_id):
     scrapper = TikTokScrapper()
     try:
-        res = asyncio.run(scrapper.run(decoded_link, tg_chat_id=chat_id))
+        res = asyncio.run(scrapper.run(decoded_link, chat_id=chat_id))
     except Exception as e:
         logger.error(e)
         res = "with error"
@@ -24,7 +24,18 @@ def parse_tiktok(decoded_link, chat_id):
 def parse_tiktok_by_sec_uid(sec_uid, chat_id):
     scrapper = TikTokScrapper()
     try:
-        res = asyncio.run(scrapper.run_by_user_uuid(sec_uid=sec_uid, tg_chat_id=chat_id))
+        res = asyncio.run(scrapper.run_by_user_uuid(sec_uid=sec_uid, chat_id=chat_id))
+    except Exception as e:
+        logger.error(e)
+        res = "with error"
+    return res
+
+
+@shared_task
+def parse_yt_music_link(link, chat_id):
+    scrapper = YoutubeScrapper()
+    try:
+        res = asyncio.run(scrapper.run(link, chat_id=chat_id))
     except Exception as e:
         logger.error(e)
         res = "with error"
