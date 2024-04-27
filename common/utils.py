@@ -81,8 +81,7 @@ class Finder:
 
 
 class HttpTelegramMessageSender:
-    # doc_url = settings.TELEGRAM_DOC_URL
-    doc_url = f"https://api.telegram.org/bot6288404871:AAHS6C29JiFkcrMspNkLxWB72_PLNO3K0V4/sendDocument"
+    doc_url = settings.TELEGRAM_DOC_URL
 
     @classmethod
     async def send_csv_doc(cls, chat_id: int, collection: dict | list | pd.DataFrame, caption: str, file_name: str = 'report.csv') -> str:
