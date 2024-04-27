@@ -111,6 +111,7 @@ class YoutubeScrapper:
 
             # ищем все videoId в словаре
             found_ids.update(finder.find(json_data, 'videoId'))
+            prev_parsed_count = len(found_ids)
 
             # пагинация
             while continuation_token:
@@ -121,6 +122,11 @@ class YoutubeScrapper:
                 # ищем все videoId в словаре
                 found_ids.update(finder.find(json_data, 'videoId'))
                 logger.info(f'Найдено {len(found_ids)} видео')
+
+                # чек на случай бесконечного цикла. По идее такой ситуации быть не должно
+                if prev_parsed_count == len(found_ids):
+                    break
+                prev_parsed_count = len(found_ids)
 
                 # TODO временный блок на время тестирования
                 if len(found_ids) > self.MAX_ITEM_COLLECTED_COUNT:

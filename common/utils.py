@@ -59,6 +59,8 @@ class Finder:
                 self._find_in_list(value)
 
     def find_by_key_path(self, data: dict, key_path: list[str]) -> Any:
+        """Ищет значение по ключам"""
+        # TODO кажется, работает не очень корректно, т.к. в случае, если она не находит - возвращается как-то значение, а хотелось бы получать None
         while key_path:
             key = key_path.pop(0)
             if key in data:
@@ -66,15 +68,15 @@ class Finder:
             if isinstance(data, dict):
                 continue
             if isinstance(data, list):
-                data = self.find_by_key_path_list(data, key_path)
+                data = self._find_by_key_path_list(data, key_path)
         return data
 
-    def find_by_key_path_list(self, data: list, key_path: list[str]) -> Any:
+    def _find_by_key_path_list(self, data: list, key_path: list[str]) -> Any:
         for d in data:
             if isinstance(d, dict):
                 data = self.find_by_key_path(d, key_path)
             if isinstance(d, list):
-                self.find_by_key_path_list(d, key_path)
+                self._find_by_key_path_list(d, key_path)
         return data
 
 
