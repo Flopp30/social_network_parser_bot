@@ -5,7 +5,7 @@
 Используются во время парсинга музыки.
 """
 
-from scrappers.tiktok.request_params.models import TikTokScrapperConfig
+from scrappers.tiktok.request_params.config import TikTokScrapperConfig
 
 iphone_mozilla_settings = TikTokScrapperConfig(
     ms_token=(
