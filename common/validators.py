@@ -47,13 +47,13 @@ class LinkValidator:
 
     @classmethod
     def validate_youtube_music_link(cls, link: str) -> bool:
-        # TODO реализовать валидацию
-        return True
+        pattern = r'^https?:\/\/(?:www\.)?youtube\.com\/source\/[\w-]+\/shorts.*$'
+        return re.match(pattern, link) is not None
 
     @classmethod
     def validate_youtube_user_link(cls, link: str) -> bool:
         # TODO реализовать валидацию ссылки на акк в тиктоке
-        return True
+        return False
 
 
 if __name__ == '__main__':
@@ -62,4 +62,4 @@ if __name__ == '__main__':
     print(LinkValidator.validate('https://www.tiktok.com/music/Scary-Garry-6914598970259490818'))
     print(LinkValidator.validate('https://youtube.com/source/asfvzc1232/shorts?si=Z-v366gPFTMQeGia'))
     print(LinkValidator.validate('https://youtube.com/source/ZmKk4krdy84/shorts?bp=8gUeChwSGgoLWm1LazRrcmR5ODQSC1ptS2s0a3JkeTg0'))
-    print(LinkValidator.validate('https://youtube.com/@officialphonkmusic?si=m1fGBNlqthSp1_Zd'))
+    # print(LinkValidator.validate('https://youtube.com/@officialphonkmusic?si=m1fGBNlqthSp1_Zd'))

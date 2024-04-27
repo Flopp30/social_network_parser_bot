@@ -18,7 +18,7 @@ import requests
 from django.conf import settings
 
 from common.utils import timer, HttpTelegramMessageSender
-from scrappers.tiktok.request_params.models import SCRAPPER_TIKTOK_SETTINGS
+from scrappers.tiktok.request_params.config import SCRAPPER_TIKTOK_SETTINGS
 from scrappers.tiktok.request_params.settings_instances import *  # noqa
 
 logger = logging.getLogger('tiktok_scrapper')

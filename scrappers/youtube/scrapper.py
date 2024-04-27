@@ -35,6 +35,9 @@ class YoutubeScrapper:
     VISITOR_DATA_PATH = ['responseContext', 'webResponseContextExtensionData', 'ytConfigData', 'visitorData']
     QUERY_PARAM_PATH = ['browseEndpoint', 'params']
 
+    # временное ограничение на тестирование
+    MAX_ITEM_COLLECTED_COUNT: int = 4000
+
     # вроде не нужен, но пусть полежит сохраненный какое-то время.
     # CONTINUATION_TOKEN_PATH = ['contents', 'twoColumnBrowseResultsRenderer', 'tabs', 'tabRenderer', 'content', 'richGridRenderer', 'contents',
     #                            'continuationItemRenderer', 'continuationEndpoint', 'continuationCommand', 'token']
@@ -118,6 +121,10 @@ class YoutubeScrapper:
                 # ищем все videoId в словаре
                 found_ids.update(finder.find(json_data, 'videoId'))
                 logger.info(f'Найдено {len(found_ids)} видео')
+
+                # TODO временный блок на время тестирования
+                if len(found_ids) > self.MAX_ITEM_COLLECTED_COUNT:
+                    break
 
         return found_ids
 
