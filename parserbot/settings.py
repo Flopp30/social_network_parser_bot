@@ -11,6 +11,7 @@ TELEGRAM_TOKEN = env('BOT_TOKEN', None)
 BOT_LOG_LEVEL = env('BOT_LOG_LEVEL', 10)
 BOT_MODE = env('BOT_MODE', 'callback')  # webhook in other case
 TELEGRAM_DOC_URL = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendDocument"
+TELEGRAM_MESSAGE_URL = f'https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage'
 
 # Scrappers definition
 TT_SIGNATURE_URL = env('TT_SIGNATURE_URL')

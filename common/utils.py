@@ -82,6 +82,7 @@ class Finder:
 
 class HttpTelegramMessageSender:
     doc_url = settings.TELEGRAM_DOC_URL
+    send_message_url = settings.TELEGRAM_MESSAGE_URL
 
     @classmethod
     async def send_csv_doc(cls, chat_id: int, collection: dict | list | pd.DataFrame, caption: str, file_name: str = 'report.csv') -> str:
@@ -122,7 +123,7 @@ class HttpTelegramMessageSender:
         response = None
         try:
             async with httpx.AsyncClient() as client:
-                response = await client.post(cls.doc_url, params=params)
+                response = await client.post(cls.send_message_url, json=params)
                 response.raise_for_status()
                 logger.info(f"Report send with status {response.status_code}")
         except Exception as e:

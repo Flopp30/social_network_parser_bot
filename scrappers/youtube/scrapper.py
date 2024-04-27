@@ -114,6 +114,7 @@ class YoutubeScrapper:
             prev_parsed_count = len(found_ids)
 
             # пагинация
+            attempt_counter = 3
             while continuation_token:
                 json_data: dict = await self.pagination_post_request(base_url, query_params, visitor_data, continuation_token, client)
                 # ищем новый токен пагинации
@@ -122,10 +123,11 @@ class YoutubeScrapper:
                 # ищем все videoId в словаре
                 found_ids.update(finder.find(json_data, 'videoId'))
                 logger.info(f'Найдено {len(found_ids)} видео')
-
                 # чек на случай бесконечного цикла. По идее такой ситуации быть не должно
                 if prev_parsed_count == len(found_ids):
-                    break
+                    if attempt_counter == 0:
+                        break
+                    attempt_counter += 1
                 prev_parsed_count = len(found_ids)
 
                 # TODO временный блок на время тестирования
@@ -144,13 +146,14 @@ class YoutubeScrapper:
         return [self._get_collected_item(item) for item in json_data]
 
     def _get_collected_item(self, item: dict) -> CollectedItem:
+        statistic = item.get('statistics', {})
         return CollectedItem(
-            link=self.yt_video_base_link + item['id'],
-            views=item['statistics']['viewCount'],
-            likes=item['statistics']['likeCount'],
-            comments=item['statistics']['commentCount'],
-            favourites=item['statistics']['favoriteCount'],
-            id=item['id'],
+            link=self.yt_video_base_link + item.get('id'),
+            views=statistic.get('viewCount'),
+            likes=statistic.get('likeCount'),
+            comments=statistic.get('commentCount'),
+            favourites=statistic.get('favoriteCount'),
+            id=item.get('id'),
         )
 
     async def pagination_post_request(self, base_url: str, query_params: str, visitor_data: str, continuation: str, client: httpx.AsyncClient) -> dict:
