@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     "bot_parts",
     "user",
     "common",
+    "monitoring",
 ]
 
 MIDDLEWARE = [
