@@ -6,7 +6,6 @@ import itertools
 import logging
 import random
 import re
-import time
 from datetime import datetime
 from json import JSONDecodeError
 from pathlib import Path
@@ -17,6 +16,8 @@ import aiohttp
 import httpx
 import requests
 from django.conf import settings
+
+from common.utils import timer, HttpTelegramMessageSender
 from scrappers.tiktok.request_params.models import SCRAPPER_TIKTOK_SETTINGS
 from scrappers.tiktok.request_params.settings_instances import *  # noqa
 
@@ -67,40 +68,16 @@ class CollectedItem(TypedDict):
     description: str
 
 
-try:
-    TT_SIGNATURE_URL = settings.TT_SIGNATURE_URL
-except Exception:
-    TT_SIGNATURE_URL = 'http://localhost:8080/signature'
-
-
-def timer(func):
-    async def wrapper(*args, **kwargs):
-        start_time = time.time()
-        result = await func(*args, **kwargs)
-        end_time = time.time()
-        execution_time = end_time - start_time
-        logger.info(f'Время выполнения функции {func.__name__}: {execution_time} сек')
-        return result
-
-    return wrapper
-
-
 class TikTokScrapper:
     # ссылка для парсинга музыки
     music_api_url = "https://www.tiktok.com/api/music/item_list/"
     # ссылка для подписания сигнатуры
-    user_signature_url = TT_SIGNATURE_URL
+    user_signature_url = settings.TT_SIGNATURE_URL
     # сюда отправляются все запросы для подписания при парсинге юзеров
     user_fake_api_url = "https://m.tiktok.com/api/post/item_list/?"
     user_api_url = CONSTANT_USER_API_URL
     # список настроек (из SCRAPPER_TIKTOK_SETTINGS)
     configs = SCRAPPER_TIKTOK_SETTINGS
-
-    # зачем тут try except я сейчас хз, выглядит оч плохо, попробовать без него?
-    try:
-        tg_api_send_doc_url = f"https://api.telegram.org/bot{settings.TELEGRAM_TOKEN}/sendDocument"
-    except Exception:
-        tg_api_send_doc_url = ''
 
     def __init__(self):
         self.uniq_ids = set()
@@ -114,7 +91,7 @@ class TikTokScrapper:
             self.music_attempts = 3
 
     @timer
-    async def run(self, url: str, tg_chat_id: int = None):
+    async def run(self, url: str, chat_id: int = None):
         """Основной процесс - точка входа"""
         normalized_data: list[CollectedItem] = []
         report: str = ''
@@ -178,15 +155,14 @@ class TikTokScrapper:
         )
         logger.info(report)
         # если передан tg chat id, то отправляем в стриме
-        if tg_chat_id:
-            await self._send_report_to_tg(tg_chat_id, normalized_data, file_name, report)
-            return self.task_result
+        if chat_id:
+            return await HttpTelegramMessageSender.send_csv_doc(chat_id, normalized_data, report, file_name)
 
         # иначе сохраняем в csv (используется для ручного тестирования в основном)
         self._save_to_csv(collected=normalized_data, filename=file_name)
         return self.task_result
 
-    async def run_by_user_uuid(self, sec_uid, tg_chat_id=None):
+    async def run_by_user_uuid(self, sec_uid, chat_id=None):
         """Метод, который выполняет полный цикл парсинга аккаунта (вызывается отдельно, не через run)"""
         # NOTE по сути был добавлен, потому что в какой-то момент парсили видео по sec uid (а не через ссылку, как сейчас)
         normalized_data = await self._request_user_process(sec_uid)
@@ -204,39 +180,11 @@ class TikTokScrapper:
             )
         file_name = 'user_report.csv'
         logger.info(report)
-        if tg_chat_id:
-            await self._send_report_to_tg(tg_chat_id, normalized_data, file_name, report)
-            return self.task_result
+        if chat_id:
+            return await HttpTelegramMessageSender.send_csv_doc(chat_id, normalized_data, report, file_name)
+
         self._save_to_csv(collected=normalized_data, filename=file_name)
         return self.task_result
-
-    async def _send_report_to_tg(
-            self,
-            tg_chat_id,
-            normalized_data: list[CollectedItem],
-            file_name: str = 'report.csv',
-            report: str = ''
-    ):
-        """Отправляет отчет в tg"""
-        string_io = self.get_string_io(normalized_data)
-        csv_data = string_io.getvalue().encode('utf-8')
-        files = {
-            "document": (file_name, csv_data, "text/csv"),
-        }
-        params = {
-            "chat_id": tg_chat_id,
-            "caption": report
-        }
-        response = None
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(self.tg_api_send_doc_url, params=params, files=files)
-                response.raise_for_status()
-                logger.info(f"Report send with status {response.status_code}")
-        except Exception as e:
-            logger.error(response.__dict__)
-            logger.error(e)
-            self.task_result = "With an error"
 
     async def _request_user_process(self, sec_uid) -> list[CollectedItem]:
         """Парсит страницу пользователя (по sec_uid) и возвращает список собранных данных"""
@@ -430,41 +378,9 @@ class TikTokScrapper:
             writer.writerows(collected)  # type:ignore
 
     @staticmethod
-    def get_string_io(collected: list[CollectedItem]) -> io:
-        """Возвращает стрим строки с данными"""
-        fieldnames = ['link', 'upload', 'description', 'duration', 'views', 'likes', 'comments', 'resend', 'saves']
-        output = io.StringIO()
-        writer = csv.DictWriter(output, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(collected)  # type: ignore
-        output.seek(0)
-        return output
-
-    @staticmethod
     def _format_timestamp(timestamp) -> str:
         try:
             dt = datetime.fromtimestamp(int(timestamp))
             return dt.strftime('%Y-%m-%d %H:%M:%S')
         except Exception:
             return '-'
-
-
-if __name__ == '__main__':
-    scrapper = TikTokScrapper()
-    # asyncio.run(scrapper.run('https://www.tiktok.com/@phonkmusicxxl'))
-    # asyncio.run(scrapper.run_by_user_uuid(
-    #     sec_uid='MS4wLjABAAAAK2RRK-FRSh8Jj_0SW4Cbq3vXPkEArO9wiVIv2Gn9CpVdSJct_qzmrvvxqGRsY0K6')
-    # )
-    # asyncio.run(scrapper.run('https://www.tiktok.com/music/Scary-Garry-6914598970259490818'))
-
-    """
-    https://www.tiktok.com/@rxzxlx._.nation_
-    MS4wLjABAAAAK2RRK-FRSh8Jj_0SW4Cbq3vXPkEArO9wiVIv2Gn9CpVdSJct_qzmrvvxqGRsY0K6
-    
-    https://www.tiktok.com/@djdannys_ 
-    MS4wLjABAAAA9MGBOywKrH9Qd5YU2dx4gRweR19YdFGMjj4dluqFId5ebCKp5rdaWebIZr7JPDLF
-    
-    
-    https://www.tiktok.com/@phonkmusicxxl 
-    MS4wLjABAAAAz2_EHaznmB9JKgkaBgpoBPqKUh73k-eL7eH2netlM4esmWYbcTzIRzsBQMDCxVSo
-    """

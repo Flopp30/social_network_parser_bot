@@ -7,3 +7,5 @@ dj-database-url==2.1.0
 requests==2.31.*
 celery==5.3.*
 redis==5.0.*
+pandas==2.2.2
+pre-commit==3.7.0
