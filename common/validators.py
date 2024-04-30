@@ -1,14 +1,21 @@
 import re
-from urllib.parse import unquote
+from urllib.parse import unquote, urlparse, urlunparse
 
 
 class LinkValidator:
     """
         Returned decoded link or None if link is not valid
     """
+    @classmethod
+    def clean_link(cls, link) -> str | None:
+        parsed_url = urlparse(link)
+        clean_parsed_url = parsed_url._replace(query="")
+        clean_url = str(urlunparse(clean_parsed_url))
+        return clean_url
 
     @classmethod
     def validate(cls, link) -> str | None:
+        link = cls.clean_link(link)
         if not cls.validate_general_link(link):
             return None
         try:
@@ -63,3 +70,5 @@ if __name__ == '__main__':
     print(LinkValidator.validate('https://youtube.com/source/asfvzc1232/shorts?si=Z-v366gPFTMQeGia'))
     print(LinkValidator.validate('https://youtube.com/source/ZmKk4krdy84/shorts?bp=8gUeChwSGgoLWm1LazRrcmR5ODQSC1ptS2s0a3JkeTg0'))
     # print(LinkValidator.validate('https://youtube.com/@officialphonkmusic?si=m1fGBNlqthSp1_Zd'))
+    print(LinkValidator.clean_link("https://www.tiktok.com/music/%D0%BE%D1%80%D0%B8%D0%B3%D0%B8%D0%BD%D0%B0%D0%BB%D1%8C%D0%BD%D1%8B%D0%B9-%D0%B7%D0%B2%D1%83%D0%BA-7357401700558916357?lang=ru-RU"))
+    print(LinkValidator.clean_link("https://youtube.com/source/asfvzc1232/shorts?si=Z-v366gPFTMQeGia"))
