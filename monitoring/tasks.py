@@ -1,24 +1,21 @@
 import asyncio
 import logging
+from datetime import datetime
+from typing import Optional
 
 from celery import shared_task
 from django.utils import timezone
 from monitoring.models import MonitoringLink
-from monitoring.scrapper import monitor_links
-
+from monitoring.scrapper import LinkMonitoringProcess
 
 logger = logging.getLogger('monitoring')
 
 
 @shared_task
-def check_and_parse_links():
-    links_to_monitor = MonitoringLink.objects.filter(next_monitoring_date__lte=timezone.now())
-    if not links_to_monitor.aexists():
-        logger.warning('No links to monitor')
-        res = "No links to monitor"
-        return res
+def parse_tt_links(source: Optional[str], date: Optional[datetime]):
+    scrapper = LinkMonitoringProcess()
     try:
-        res = asyncio.run(monitor_links(links_to_monitor))
+        res = asyncio.run(scrapper.run(source, date))
     except Exception as e:
         logger.error(e)
         res = "with error"

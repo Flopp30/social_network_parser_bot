@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import TextChoices
 
 
 class Parameter(models.Model):
@@ -28,12 +29,28 @@ class Parameter(models.Model):
 
 
 class MonitoringLink(models.Model):
+    class Sources(TextChoices):
+        YOUTUBE = 'youtube'
+        TIKTOK = 'tiktok'
+
     url = models.URLField(
         verbose_name='URL адрес',
         unique=True
     )
+
+    source = models.CharField(
+        verbose_name='Источник',
+        choices=Sources.choices,
+        max_length=20
+    )
+
     next_monitoring_date = models.DateTimeField(
         verbose_name='Дата следующего мониторинга'
+    )
+
+    is_active = models.BooleanField(
+        verbose_name='Активна?',
+        default=True
     )
 
     class Meta:
