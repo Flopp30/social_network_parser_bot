@@ -32,3 +32,17 @@ services:
     depends_on:
       - signature
       - redis
+
+  flower:
+    image: mher/flower
+    container_name: flower
+    command: celery flower --persisten=True --basic-auth="user1:password1"
+    env_file:
+      - dev.env
+    ports:
+      - 8888:8888
+    volumes:
+      - flower_data:/data
+
+volumes:
+  flower_data:
