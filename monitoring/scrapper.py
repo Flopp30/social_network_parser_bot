@@ -14,12 +14,14 @@ from common.validators import LinkValidator
 from monitoring.models import MonitoringLink, MonitoringResult, Parameter
 from playwright.async_api import async_playwright, Browser
 
-TIMEOUT_MILLISECONDS = 10000
 
 logger = logging.getLogger('monitoring')
 
 
 class LinkMonitoringProcess:
+    TIMEOUT_MILLISECONDS = 10000
+    TIMEOUT_ATTEMPTS = 3
+
     async def run(self, source: Optional[str] = None, date: Optional[datetime] = None):
         date = date or timezone.now()
         source_q = Q()
@@ -35,7 +37,7 @@ class LinkMonitoringProcess:
             res = "No links to monitor"
             return res
         try:
-            res = asyncio.run(self.monitor_links(links_to_monitor))
+            res = await self.monitor_links(links_to_monitor)
         except Exception as e:
             logger.error(e)
             res = "with error"
@@ -48,11 +50,15 @@ class LinkMonitoringProcess:
         page = await browser.new_page()
         await page.goto(url)
         await page.wait_for_load_state('domcontentloaded')
-        try:
-            element = await page.wait_for_selector("h2[data-e2e='music-video-count']", timeout=TIMEOUT_MILLISECONDS)
-        except (TimeoutError, asyncio.TimeoutError):
-            logger.error("Timeout wait_for_selector while waiting for {}".format(url))
-            return
+        current_attempt = 0
+        while current_attempt < self.TIMEOUT_ATTEMPTS:
+            try:
+                element = await page.wait_for_selector(
+                    "h2[data-e2e='music-video-count']",
+                    timeout=self.TIMEOUT_MILLISECONDS)
+            except (TimeoutError, asyncio.TimeoutError):
+                logger.error("Timeout wait_for_selector while waiting for {}".format(url))
+                current_attempt += 1
         scale_map = {
             'K': 1000,
             'M': 1000_000,
@@ -84,7 +90,8 @@ class LinkMonitoringProcess:
             logger.warning('No parameters')
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=False)  # headless=True чтоб браузер не открывался
-            tasks = [self.process_link(browser, params, timeout_hours, link) async for link in links]
+            tasks = [asyncio.create_task(self.process_link(browser, params, timeout_hours, link))
+                     async for link in links]
             if tasks:
                 await asyncio.gather(*tasks)
             await browser.close()
