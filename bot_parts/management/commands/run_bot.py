@@ -1,4 +1,3 @@
-import asyncio
 import logging
 
 from django.conf import settings
@@ -12,14 +11,12 @@ from telegram.ext import (
     filters,
     ContextTypes, PrefixHandler,
 )
-
+import bot_parts.handlers.parsing as parsing_handlers
+import bot_parts.handlers.monitoring as monitoring_handlers
+import bot_parts.handlers.start as start_handlers
 from bot_parts.helpers import check_bot_context
-from bot_parts.keyboards import START_BOARD
-from common.validators import LinkValidator
-from parserbot.tasks import parse_tiktok, parse_tiktok_by_sec_uid, parse_yt_music_link
 
 logger = logging.getLogger('tbot')
-job_queue = None
 
 
 class Command(BaseCommand):
@@ -27,110 +24,44 @@ class Command(BaseCommand):
         main()
 
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await check_bot_context(update, context, force_update=True)
-    if context.user_data['user'].is_approved:
-        message = (
-            'О, ты получил подтверждение. Ну тогда давай приступим!'
-        )
-        keyboard = START_BOARD
-        STATE = "AWAIT_WELCOME_CHOICE"
-    else:
-        message = (
-            'Привет, это Social Networks Bot. Для получения доступа обратитесь к @Afremovv'
-        )
-        keyboard = None
-        STATE = "START"
-    await context.bot.send_message(
-        chat_id=update.effective_chat.id,
-        text=message,
-        reply_markup=keyboard,
-    )
-    context.user_data['user'].state = 'START'
-    return STATE
-
-
-async def parser_welcome_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, **kwargs):
-    if update.callback_query or kwargs.get('redirect'):
-        await check_bot_context(update, context)
-        message = (
-            "Отправь ссылку для парсинга\n"
-            "Умею:\n"
-            "   - Tik-tok: user, music.\n"
-            "   - Youtube: music.\n"
-            "Примеры:\n<code>https://www.tiktok.com/@domixx007</code> \n\n"
-            "<code>https://www.tiktok.com/music/Scary-Garry-6914598970259490818</code>\n\n"
-            "<code>https://www.youtube.com/source/ZmKk4krdy84/shorts</code>\n\n"
-        )
-        await context.bot.send_message(
-            update.effective_chat.id,
-            text=message,
-            parse_mode='HTML',
-        )
-        return "AWAIT_LINK_TO_PARSE"
-    return "AWAIT_WELCOME_CHOICE"
-
-
-async def parser_start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await check_bot_context(update, context)
-
-    if decoded_link := LinkValidator.validate(update.message.text):
-        message = "Ссылка прошла валидацию, задача на парсинг поставлена.\n "
-        if 'tiktok' in decoded_link:
-            parse_tiktok.apply_async(args=[decoded_link, update.effective_chat.id])
-        elif 'youtube' in decoded_link:
-            parse_yt_music_link.apply_async(args=[decoded_link, update.effective_chat.id])
-    elif update.message.text.startswith('MS'):
-        parse_tiktok_by_sec_uid.apply_async(args=[update.message.text.strip(), update.effective_chat.id])
-        message = f'Запущен парсинг по ID: {update.message.text}'
-    else:
-        message = 'Ссылка не валидна. Если вы считаете, что это не так - стукните в лс @Flopp'
-
-    await context.bot.send_message(
-        update.effective_chat.id,
-        text=message
-    )
-    await asyncio.sleep(1)
-    return await parser_welcome_handler(update, context, redirect=True)
-
-
 async def user_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обрабатывает входящие сообщения от пользователей"""
     await check_bot_context(update, context)
+    # получаем тело сообщения
     if update.message:
+        # обычное сообщение
         user_reply = update.message.text
     elif update.callback_query.data:
+        # callback
         user_reply = update.callback_query.data
     else:
         return
-    if not context.user_data['user'].is_approved:
-        user_state = context.user_data['user'].state = 'START'
-    elif user_reply == '/start':
+
+    if not context.user_data['user'].is_approved or user_reply == '/start':
         user_state = context.user_data['user'].state = 'START'
     else:
         user_state = context.user_data['user'].state or 'START'
-    states_function = {
-        'START': start,
-        'NEW': start,
-        "AWAIT_WELCOME_CHOICE": parser_welcome_handler,
-        "AWAIT_LINK_TO_PARSE": parser_start_handler,
-    }
 
+    # мапа, возвращающая callback функции для вызова дальше.
+    states_function = {
+        # start
+        'START': start_handlers.start_handler,
+        'NEW': start_handlers.start_handler,
+        "AWAIT_WELCOME_CHOICE": start_handlers.welcome_handler,
+        # парсинг
+        "AWAIT_LINK_TO_PARSE": parsing_handlers.add_link_handler,
+        # мониторинг
+        'AWAIT_MONITORING_CHOICE': monitoring_handlers.monitoring_choice_handler,
+        'MONITORING_AWAIT_LINK_FOR_ADDING': monitoring_handlers.add_link_handler,
+        'MONITORING_AWAIT_ID_FOR_DELETING': monitoring_handlers.remove_link_handler,
+    }
+    # вызываем функцию для получения state
     state_handler = states_function[user_state]
+    # получаем некст state
     next_state = await state_handler(update, context)
+    # записываем следующий state в юзера
     context.user_data['user'].state = next_state
     await context.user_data['user'].asave()
-
-
-async def parse_by_sec_uid(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await check_bot_context(update, context)
-    sec_uid = update.message.text.split(' ')[-1]
-    parse_tiktok_by_sec_uid.apply_async(args=[sec_uid, update.effective_chat.id])
-    message = f'Парсинг по {sec_uid} запущен.'
-    await context.bot.send_message(
-        update.effective_chat.id,
-        text=message
-    )
-    return await parser_welcome_handler(update, context, redirect=True)
 
 
 def main():
@@ -141,7 +72,10 @@ def main():
     logger.addHandler(stream_handler)
 
     application = ApplicationBuilder().token(settings.TELEGRAM_TOKEN).build()
-    application.add_handler(PrefixHandler('!', ['by_id'], parse_by_sec_uid))
+    # добавляем обработчики
+    # сначала команду, чтобы она не попала в общий поток user_input_handler
+    application.add_handler(PrefixHandler('!', ['by_id'], parsing_handlers.command_parse_by_sec_uid))
+    # сюда все сообщения, т.к. команда /start, callback'и и текст
     application.add_handler(CommandHandler('start', user_input_handler))
     application.add_handler(CallbackQueryHandler(user_input_handler))
     application.add_handler(MessageHandler(filters.TEXT, user_input_handler))
