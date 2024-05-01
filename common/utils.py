@@ -7,7 +7,6 @@ import httpx
 import pandas as pd
 from django.conf import settings
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -83,6 +82,8 @@ class Finder:
 class HttpTelegramMessageSender:
     doc_url = settings.TELEGRAM_DOC_URL
     send_message_url = settings.TELEGRAM_MESSAGE_URL
+    # doc_url = f"https://api.telegram.org/bot6288404871:AAHS6C29JiFkcrMspNkLxWB72_PLNO3K0V4/sendDocument"
+    # send_message_url = f'https://api.telegram.org/bot6288404871:AAHS6C29JiFkcrMspNkLxWB72_PLNO3K0V4/sendMessage'
 
     @classmethod
     async def send_csv_doc(cls, chat_id: int, collection: dict | list | pd.DataFrame, caption: str, file_name: str = 'report.csv') -> str:
@@ -103,11 +104,12 @@ class HttpTelegramMessageSender:
         response = None
         try:
             async with httpx.AsyncClient() as client:
-                response = await client.post(settings.TELEGRAM_DOC_URL, params=params, files=files)
+                response = await client.post(cls.doc_url, params=params, files=files)
                 response.raise_for_status()
                 logger.info(f"Report send with status {response.status_code}")
         except Exception as e:
-            logger.error(response.__dict__)
+            if response:
+                logger.error(response.__dict__)
             logger.error(e)
             return 'With an error'
 
@@ -127,7 +129,8 @@ class HttpTelegramMessageSender:
                 response.raise_for_status()
                 logger.info(f"Report send with status {response.status_code}")
         except Exception as e:
-            logger.error(response.__dict__)
+            if response:
+                logger.error(response.__dict__)
             logger.error(e)
             return 'With an error'
 

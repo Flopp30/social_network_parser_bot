@@ -24,14 +24,16 @@ async def add_link_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_tiktok.apply_async(args=[decoded_link, update.effective_chat.id])
         elif 'youtube' in decoded_link:
             parse_yt_music_link.apply_async(args=[decoded_link, update.effective_chat.id])
-        message = MESSAGE_MAP['parsing_success']
+        message_key = 'parsing_success'
+
     elif update.message.text.startswith('MS'):
         # парсинг по sec_uid (для тиктока)
         parse_tiktok_by_sec_uid.apply_async(args=[update.message.text.strip(), update.effective_chat.id])
-        message = MESSAGE_MAP['parsing_by_sec_uid']
+        message_key = 'parsing_by_sec_uid'
     else:
-        message = MESSAGE_MAP['link_validation_error']
+        message_key = 'link_validation_error'
 
+    message = MESSAGE_MAP.get(message_key)
     await context.bot.send_message(
         update.effective_chat.id,
         text=message

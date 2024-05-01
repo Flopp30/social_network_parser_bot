@@ -6,4 +6,4 @@ RUN pip install --upgrade pip && pip install --upgrade setuptools && pip install
 # copy project
 COPY . .
 # run celery
-CMD celery -A parserbot worker --loglevel=info --concurrency=3 --prefetch-multiplier=3
+CMD celery -A parserbot worker --beat --scheduler django --loglevel=info --concurrency=3 --prefetch-multiplier=3

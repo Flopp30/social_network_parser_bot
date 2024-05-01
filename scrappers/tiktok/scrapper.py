@@ -1,7 +1,6 @@
 import asyncio
 import copy
 import csv
-import io
 import itertools
 import logging
 import random
@@ -10,7 +9,6 @@ from datetime import datetime
 from json import JSONDecodeError
 from pathlib import Path
 from typing import TypedDict
-from urllib.parse import urlencode
 
 import aiohttp
 import httpx
@@ -20,6 +18,7 @@ from django.conf import settings
 from common.utils import timer, HttpTelegramMessageSender
 from scrappers.tiktok.request_params.config import SCRAPPER_TIKTOK_SETTINGS
 from scrappers.tiktok.request_params.settings_instances import *  # noqa
+from scrappers.tiktok.signature import UserVideoTiktokSignature
 
 logger = logging.getLogger('tiktok_scrapper')
 
@@ -71,10 +70,7 @@ class CollectedItem(TypedDict):
 class TikTokScrapper:
     # ссылка для парсинга музыки
     music_api_url = "https://www.tiktok.com/api/music/item_list/"
-    # ссылка для подписания сигнатуры
-    user_signature_url = settings.TT_SIGNATURE_URL
-    # сюда отправляются все запросы для подписания при парсинге юзеров
-    user_fake_api_url = "https://m.tiktok.com/api/post/item_list/?"
+    # ссылка для парсинга юзеров
     user_api_url = CONSTANT_USER_API_URL
     # список настроек (из SCRAPPER_TIKTOK_SETTINGS)
     configs = SCRAPPER_TIKTOK_SETTINGS
@@ -83,12 +79,8 @@ class TikTokScrapper:
         self.uniq_ids = set()
         self.total = list()
         self.task_result = "SUCCESS"
-        try:
-            self.user_attempts = settings.TT_USER_ERROR_ATTEMPTS
-            self.music_attempts = settings.TT_MUSIC_ERROR_ATTEMPTS
-        except Exception:
-            self.user_attempts = 5
-            self.music_attempts = 3
+        self.user_attempts = settings.TT_USER_ERROR_ATTEMPTS
+        self.music_attempts = settings.TT_MUSIC_ERROR_ATTEMPTS
 
     @timer
     async def run(self, url: str, chat_id: int = None):
@@ -108,10 +100,10 @@ class TikTokScrapper:
                 tasks = []
                 for config in self.configs:
                     # перебираем конфиги и берем их них нужные нам элементы
-                    headers: dict[str:str] = copy.deepcopy(config.headers)
-                    cookies: dict[str:str] = copy.deepcopy(config.cookies)
+                    headers: dict[str, str] = copy.deepcopy(config.headers)
+                    cookies: dict[str, str] = copy.deepcopy(config.cookies)
                     # прокидываем в query параметры music_id
-                    params: dict[str:str] = copy.deepcopy(config.params) | {"musicID": music_id, "from_page": "music"}
+                    params: dict[str, str] = copy.deepcopy(config.params) | {"musicID": music_id, "from_page": "music"}
                     # тут попарно перебираем курсоры и собираем задачи
                     for start_cursor, cursor_breakpoint in zip(
                             cursors[start_slicer:finish_slicer], cursors[start_slicer + 1:finish_slicer + 1]
@@ -208,48 +200,10 @@ class TikTokScrapper:
 
     async def _scrape_user_page(self, sec_uid: str, cursor: int) -> CollectedItem | None:
         logger.debug(f'Parse. Cursor: {cursor}')
-        params = {
-            "aid": "1988",
-            "count": 30,
-            "cookie_enabled": "true",
-            "screen_width": 0,
-            "screen_height": 0,
-            "browser_language": "",
-            "browser_platform": "",
-            "browser_name": "",
-            "browser_version": "",
-            "browser_online": "",
-            "timezone_name": "Europe/London",
-            "secUid": sec_uid,
-            "cursor": cursor
-        }
-        # подписываем сигнатуру через fake_url
-        fake_user_url = self.user_fake_api_url + urlencode(params)
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                    self.user_signature_url,
-                    headers={'Content-type': 'application/json'},
-                    data=fake_user_url
-            ) as response:
-                try:
-                    serialized_data = await response.json()
-                except JSONDecodeError:
-                    logger.error('Error in the response from the internal service (signer)')
-                    self.task_result = "With an error"
-                    return None
-        # получаем x-tt-params (то, ради чего вообще сигнатура подключена)
-        if not (tt_params := serialized_data.get('data', {}).get('x-tt-params')):
-            logger.warning(f'tt_params not found in {serialized_data}')
-            self.task_result = "With an error"
+        headers: dict[str, str] | None = await UserVideoTiktokSignature.get_request_headers(sec_uid, cursor)
+        if headers is None:
+            logger.error('Error in the response from the internal service (signer)')
             return None
-        # здесь конкретный ua нужен
-        headers: dict[str:str] = {
-            "x-tt-params": tt_params,
-            'user-agent': (
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36 Edg/107.0.1418.56"
-            ),
-        }
         try:
             # отправляется обычный медленный get запроса, потому что в любой другой конфигурации возвращается пустой ответ :(
             response = requests.get(CONSTANT_USER_API_URL, headers=headers)
@@ -268,8 +222,8 @@ class TikTokScrapper:
 
     async def _request_music_process(
             self,
-            headers: dict[str:str],
-            cookies: dict[str:str],
+            headers: dict[str, str],
+            cookies: dict[str, str],
             params: dict[str: str],
             start_cursor: int,
             cursor_breakpoint: int,
@@ -344,13 +298,15 @@ class TikTokScrapper:
 
     def _parse_collected_from_json(self, json_item: dict) -> CollectedItem | None:
         """Вытаскивает из полученного json объекта информацию о видео"""
-        author_id = json_item.get('author', {}).get('uniqueId')
-        video_id = json_item.get('id')
-        stats = json_item.get('stats')
+        author_id: str = json_item.get('author', {}).get('uniqueId')
+        video_id: str = json_item.get('id')
+        stats: dict = json_item.get('stats')
+
         if not author_id or not stats or not video_id:
             logger.info(f'No content from item:\n{json_item}')
             return None
         self.total.append(f'{author_id}@{video_id}')
+
         if f"{author_id}@{video_id}" in self.uniq_ids:
             logger.info(f'Duplicated item: {author_id}@{video_id}')
             return None

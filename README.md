@@ -11,7 +11,12 @@
    ```bash
    git clone https://github.com/carcabot/tiktok-signature.git
    ```
-5. Создаешь файл с переменными окружения
+5. В файлах tiktok-signature/package.json и package-lock.json проверить зависимости:
+   ```sh
+       "playwright": "1.10.0",
+       "playwright-chromium": "1.10.0"
+   ```
+6. Создаешь файл с переменными окружения
    ```bash
    cp .env.sample .env
    cp .env.sample dev.env
@@ -24,28 +29,30 @@
    ```
    dev.env должен сразу выглядеть вот так
    ```env
-   TT_SIGNATURE_URL=http://localhost/signature
+   TT_SIGNATURE_URL=http://signature:8080/signature
+   CELERY_BROKER_URL=redis://redis:6379/0
+   FLOWER_PORT=8888
    CELERY_BROKER=redis://redis:6379/0
    CELERY_BACKEND=redis://redis:6379/0
    ```
-6. Получаешь токен нового бота у <a href="https://t.me/BotFather">bot father</a> и закидываешь его в .env и dev.env ```BOT_TOKEN```
-7. Для локально разработки запускаешь только redis, celery и tiktok-signature
+7. Получаешь токен нового бота у <a href="https://t.me/BotFather">bot father</a> и закидываешь его в .env и dev.env ```BOT_TOKEN```
+8. Для локально разработки запускаешь только redis, celery и tiktok-signature
    ```bash 
    docker compose -f docker-compose-dev.yml up --build 
    ```
-8. Миграции (накатываются в SQLite)
+9. Миграции (накатываются в SQLite)
    ```bash
    ./maange.py migrate 
    ```
-9. Суперюзер
+10. Суперюзер
    ```bash
    ./manage.py createsuperuser 
    ```
-10. Запускаешь бота
+11. Запускаешь бота
    ```bash
    ./manage.py run_bot
    ```
-11. Запускаешь админку
+12. Запускаешь админку
    ```bash
    ./manage.py runserver
    ```
