@@ -19,6 +19,10 @@ class Parameter(models.Model):
         default=3,
         verbose_name='Минимальное количество отслеживаний перед созданием отчёта'
     )
+    alert_ratio = models.FloatField(
+        verbose_name='Коэффициент оповещения',
+        default=1.5
+    )
 
     class Meta:
         verbose_name = 'Конфигурация'

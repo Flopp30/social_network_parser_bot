@@ -120,7 +120,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CELERY_BROKER = env('CELERY_BROKER')
 CELERY_BACKEND = env('CELERY_BACKEND')
-CELERY_IMPORTS = ('parserbot.tasks',)
+CELERY_IMPORTS = ('parserbot.tasks', 'parserbot.periodic_tasks',)
 
 
 LOGGING = {
