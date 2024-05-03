@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 
 from django.db.models import QuerySet, Q
 from django.utils import timezone
-from playwright.async_api import async_playwright, Browser, Page, ElementHandle
+from playwright.async_api import async_playwright, Browser, Page, ElementHandle, BrowserContext
 
 from common.utils import timer
 from monitoring.models import MonitoringLink, MonitoringResult, Parameter
@@ -25,6 +25,8 @@ class LinkMonitoringProcess:
     def __init__(self):
         """Инициализирует атрибут params объекта первой(и единственной) записью из модели Parameter"""
         self.params: Parameter = Parameter.objects.first()
+        # self.tiktok_links: QuerySet[MonitoringLink] | None = None
+        # self.youtube_links: QuerySet[MonitoringLink] | None = None
 
     async def run(self, source: str | None = None, date: datetime | None = None):
         """
@@ -45,6 +47,7 @@ class LinkMonitoringProcess:
         source_q: Q = Q()
         if source:
             source_q &= Q(source=source)
+        # FIXME мб через self сделать? Тогда можно source и date в init передавать, а не в run
         links_to_monitor: QuerySet = MonitoringLink.objects.filter(
             source_q,
             next_monitoring_date__lte=date,
@@ -55,12 +58,27 @@ class LinkMonitoringProcess:
             logger.warning(res)
             return res
         try:
+            # TODO refactor
+            # if not source or source == 'tiktok':
+            #     await self.tiktok_process()
+            # if not source or source == 'youtube':
+            #     await self.youtube_process()
+
             await self._monitor_links(links_to_monitor)
-            res = "Monitoring successed"
+            res = "Monitoring successful"
         except Exception as e:
             logger.error(e)
             res = f"Monitor links error: {e}"
         return res
+
+    async def tiktok_process(self):
+        """Процесс мониторинга ТТ ссылок"""
+        # TODO Нужно разделить процесс обработки ссылок по source
+        pass
+
+    async def youtube_process(self):
+        """Процесс мониторинга YT ссылок"""
+        pass
 
     @timer
     async def _monitor_links(self, links: QuerySet[MonitoringLink]) -> None:
@@ -72,7 +90,8 @@ class LinkMonitoringProcess:
         """
         async with async_playwright() as p:
             browser: Browser = await p.chromium.launch(headless=False)  # headless=True чтоб браузер не открывался
-            tasks: list[Task] = [asyncio.create_task(self._process_link(browser, link)) async for link in links]
+            context: BrowserContext = await browser.new_context()
+            tasks: list[Task] = [asyncio.create_task(self._process_link(context, link)) async for link in links]
             if tasks:
                 results: tuple = await asyncio.gather(*tasks)
                 await MonitoringResult.objects.abulk_create(results)
@@ -80,7 +99,7 @@ class LinkMonitoringProcess:
         await MonitoringLink.objects.abulk_update(links, fields=["next_monitoring_date"])
 
     @timer
-    async def _process_link(self, browser: Browser, link: MonitoringLink) -> MonitoringResult | None:
+    async def _process_link(self, context: BrowserContext, link: MonitoringLink) -> MonitoringResult | None:
         """
         Обработчик ссылки: открывает новую страницу в браузере, получает контент со страницы, получает количество
         видео, создает результат мониторинга и обновляет дату следующего мониторинга.
@@ -91,7 +110,7 @@ class LinkMonitoringProcess:
         Returns:
             MonitoringResult: результат мониторинга ссылки
         """
-        page: Page = await browser.new_page()
+        page: Page = await context.new_page()
         element: ElementHandle | None = await self._get_page_content(link, page)
         if not element:
             logger.error('No element')
