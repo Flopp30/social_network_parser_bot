@@ -63,7 +63,8 @@ class Finder:
 
     def find_by_key_path(self, data: dict, key_path: list[str]) -> Any:
         """Ищет значение по ключам"""
-        # TODO кажется, работает не очень корректно, т.к. в случае, если она не находит - возвращается как-то значение, а хотелось бы получать None
+        # TODO кажется, работает не очень корректно, т.к. в случае, если не находит - возвращается какое-то значение, а хотелось бы получать None
+        #  подумать над более корректным вариантом
         while key_path:
             key = key_path.pop(0)
             if key in data:
@@ -206,8 +207,7 @@ class YtMusicVideoCountParser(YtVideoCountParser):
         tabs: list = json_data.get('contents', {}).get('twoColumnBrowseResultsRenderer', {}).get('tabs', [])
         for tab in tabs:
             # contents - это список видео для отрисовки
-            if not (contents := tab.get('tabRenderer', {}).get('content', {}).get('richGridRenderer', {}).get('contents', [])):
-                continue
+            contents: list[dict | None] = tab.get('tabRenderer', {}).get('content', {}).get('richGridRenderer', {}).get('contents', [])
             for content in contents:
                 # accessibility_text - текст для незрячих. Наличие там ключевого слова 'short' или 'короткое' указывает на то, что в этой вкладке лежат шортсы
                 accessibility_text: str = content.get('richItemRenderer', {}).get('content', {}).get('shortsLockupViewModel', {}).get('accessibilityText')
