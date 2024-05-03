@@ -122,7 +122,7 @@ class HttpTelegramMessageSender:
 
     @classmethod
     async def send_text_message(cls, chat_id: int, text: str) -> str:
-        """Отправляет тестовое сообщение в tg"""
+        """Отправляет текстовое сообщение в tg"""
         params = {
             "chat_id": chat_id,
             "text": text
@@ -142,39 +142,36 @@ class HttpTelegramMessageSender:
         return 'Ok'
 
 
-class YtVideoCountParserABC(abc.ABC):
+class YtVideoCountParser:
     SCALE_MAP = {
         'тыс.': 1_000,
-        'млн.': 1_000_000,  # TODO потестить, не нашел сходу звуков с таким количеством рилсов
+        'млн.': 1_000_000,  # TODO потестить, не нашел сходу аккаунтов с таким количеством видео
     }
 
     @abc.abstractmethod
     def get_video_count(self, html_content: str) -> int | None:
         ...
 
-    def _get_number_from_match_res(self, match: re.Match[str] | None) -> int | None:
-        """Возвращает количество видео из совпадения по регулярному выражению
-        """
-        video_count: int | float | None = None
-        match_res: str = match.group(1).strip()
+    def _clean_video_count(self, dirty_video_count: str) -> int | None:
+        """Возвращает количество видео из совпадения по регулярному выражению"""
+        video_count: int | None = None
+        # пробуем в инт сразу (если нет разделителей, то ок)
+        try:
+            return int(dirty_video_count)
+        except ValueError:
+            pass
 
         # разные разделите приходят
         for separator in ('\xa0', ' ', ' '):
-            if separator in match_res:
-                count, unit = match_res.split(separator)
-                video_count = float(count.replace(',', '.')) * self.SCALE_MAP.get(unit, 1)
+            if separator in dirty_video_count:
+                count, unit = dirty_video_count.split(separator)
+                video_count = int(float(count.replace(',', '.')) * self.SCALE_MAP.get(unit, 1))
                 break
-        # нет разделителей - пришло целое число
-        if video_count is None:
-            try:
-                video_count = int(match_res)
-            except ValueError:
-                return None
 
-        return int(video_count)
+        return video_count
 
 
-class YtMusicVideoCountParser(YtVideoCountParserABC):
+class YtMusicVideoCountParser(YtVideoCountParser):
     """Получает количество опубликованных видео со страницы звука"""
 
     def get_video_count(self, html_content: str) -> int | None:
@@ -193,7 +190,8 @@ class YtMusicVideoCountParser(YtVideoCountParserABC):
         match: re.Match[str] | None = re.search(r'\{"metadataParts":\[\{"text":\{"content":"(.*?)коротких видео', html_content)
         if not match:
             return None
-        return self._get_number_from_match_res(match)
+        match_res: str = match.group(1).strip()
+        return self._clean_video_count(match_res)
 
     def _parse_video_count_by_script(self, html_content: str) -> int | None:
         """Получает количество видео из скрипта"""
@@ -218,7 +216,7 @@ class YtMusicVideoCountParser(YtVideoCountParserABC):
         return None
 
 
-class YtUserVideoCountParser(YtVideoCountParserABC):
+class YtUserVideoCountParser(YtVideoCountParser):
     """Получает количество опубликованных видео со страницы пользователя (пока что всего, не только шортсов)"""
 
     def get_video_count(self, html_content: str) -> int | None:
@@ -233,14 +231,15 @@ class YtUserVideoCountParser(YtVideoCountParserABC):
         match: re.Match[str] | None = re.search(r',"videosCountText":\{"runs":\[{"text":"(.*?)"},\{"text"', html_content)
         if not match:
             return None
-        return self._get_number_from_match_res(match)
+        match_res: str = match.group(1).strip()
+        return self._clean_video_count(match_res)
 
 
 async def get_yt_music_video_count(url: str, client: httpx.AsyncClient, parser: YtMusicVideoCountParser) -> int | None:
-    """Возвращает количество суммарное количество коротких видео для одного ютуб звука"""
-    # TODO это пример использования, по аналогии нужно в Monitoring.run() if MonitoringLink.source = youtube and 'source' in MonitoringLink.url
-    resp: httpx.Response = await client.get(url)
+    """Возвращает суммарное количество коротких видео для одного ютуб звука"""
+    # TODO это пример использования, по аналогии нужно в MonitoringProcess.run() if MonitoringLink.source = youtube and 'source' in MonitoringLink.url
     try:
+        resp: httpx.Response = await client.get(url)
         resp.raise_for_status()
     except Exception as e:
         logger.error(e)
@@ -251,10 +250,10 @@ async def get_yt_music_video_count(url: str, client: httpx.AsyncClient, parser: 
 
 
 async def get_yt_user_video_count(url: str, client: httpx.AsyncClient, parser: YtUserVideoCountParser) -> int | None:
-    """Возвращает количество суммарное количество коротких видео для одного ютуб профиля"""
+    """Возвращает количество суммарное количество видео для одного ютуб профиля"""
     # TODO это пример использования, по аналогии нужно в MonitoringProcess.run() if MonitoringLink.source = youtube and not 'source' in MonitoringLink.url
-    resp: httpx.Response = await client.get(url)
     try:
+        resp: httpx.Response = await client.get(url)
         resp.raise_for_status()
     except Exception as e:
         logger.error(e)
@@ -282,11 +281,11 @@ if __name__ == '__main__':
             # между запросами лучше слип по секунде хотя бы и несколько попыток на каждый запрос (для юзера)
             link = 'https://www.youtube.com/@officialphonkmusic'
             video_count = await get_yt_user_video_count(link, client, profile_parser)
-            print(video_count)  # 11_000
+            print(video_count)  # 183
 
             link = 'https://www.youtube.com/@varlamov'
             video_count = await get_yt_user_video_count(link, client, profile_parser)
-            print(video_count)  # 11_000
+            print(video_count)  # 1800
 
 
     # videosCountText
