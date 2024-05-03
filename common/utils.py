@@ -158,4 +158,4 @@ async def test():
         await asyncio.gather(*async_tasks)
         await browser.close()
 
-asyncio.run(test())
+#asyncio.run(test())

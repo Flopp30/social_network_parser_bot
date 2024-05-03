@@ -32,7 +32,6 @@ class VideoCountParser:
             return int(dirty_video_count)
         except ValueError:
             pass
-
         # разные разделите приходят
         for separator in ('\xa0', ' ', ' '):
             if separator in dirty_video_count:
@@ -99,23 +98,12 @@ class YtUserVideoCountParser(VideoCountParser):
             return None
 
     def _parse_video_count_by_metadata(self, html_content: str) -> int | None:
+
         match: re.Match[str] | None = re.search(r',"videosCountText":\{"runs":\[{"text":"(.*?)"},\{"text"', html_content)
         if not match:
             return None
         match_res: str = match.group(1).strip()
         return self._clean_yt_video_count(match_res)
-
-
-class TiktokMusicVideoCountParser(VideoCountParser):
-    """Получает количество для тиктока"""
-
-    def get_video_count(self, html_content: str) -> int | None:
-        """Возвращает количество видео по html коду страницы"""
-        try:
-            return self._parse_video_count(html_content)
-        except Exception as e:
-            logger.error(e)
-            return None
 
 
 async def get_yt_music_video_count(url: str, client: httpx.AsyncClient, parser: YtMusicVideoCountParser) -> int | None:
@@ -128,7 +116,7 @@ async def get_yt_music_video_count(url: str, client: httpx.AsyncClient, parser: 
         logger.error(e)
         return None
     html_content: str = resp.text
-    video_count: int | None = parser.get_video_count(html_content)
+    video_count: int | None = await parser.get_video_count(html_content)
     return video_count
 
 
@@ -141,8 +129,11 @@ async def get_yt_user_video_count(url: str, client: httpx.AsyncClient, parser: Y
     except Exception as e:
         logger.error(e)
         return None
+
     html_content: str = resp.text
-    video_count: int | None = parser.get_video_count(html_content)
+
+    video_count: int | None = await parser.get_video_count(html_content)
+
     return video_count
 
 
@@ -169,7 +160,6 @@ if __name__ == '__main__':
             link = 'https://www.youtube.com/@varlamov'
             video_count = await get_yt_user_video_count(link, client, profile_parser)
             print(video_count)  # 1800
-
 
     # videosCountText
     asyncio.run(yt_process())

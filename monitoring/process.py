@@ -4,12 +4,14 @@ import re
 from asyncio import Task
 from datetime import datetime, timedelta
 
+import httpx
 from django.db.models import QuerySet, Q
 from django.utils import timezone
 from playwright.async_api import async_playwright, Browser, Page, ElementHandle, BrowserContext
 
 from common.utils import timer
 from monitoring.models import MonitoringLink, MonitoringResult, Parameter
+from monitoring.parsers import YtMusicVideoCountParser, YtUserVideoCountParser
 
 logger = logging.getLogger('monitoring')
 
@@ -22,13 +24,21 @@ class LinkMonitoringProcess:
         'M': 1000_000,
     }
 
-    def __init__(self):
-        """Инициализирует атрибут params объекта первой(и единственной) записью из модели Parameter"""
-        self.params: Parameter = Parameter.objects.first()
-        # self.tiktok_links: QuerySet[MonitoringLink] | None = None
-        # self.youtube_links: QuerySet[MonitoringLink] | None = None
+    def __init__(self, source: str | None = None, date: datetime | None = None):
+        """
+        Инициализация процесса мониторинга
 
-    async def run(self, source: str | None = None, date: datetime | None = None):
+        Args:
+            source (str | None): Источник ссылок для мониторинга ('youtube', 'tiktok', или None).
+            date (datetime | None): Дата для мониторинга.
+        """
+        self.params: Parameter = Parameter.objects.first()
+        self.date: datetime = date or timezone.now()
+        self.source: str = source
+        self.yt_links: QuerySet[MonitoringLink] = self._load_links('youtube')
+        self.tt_links: QuerySet[MonitoringLink] = self._load_links('tiktok')
+
+    async def run(self):
         """
         Запускает процесс мониторинга ссылок, основываясь на указанном источнике и дате.
 
@@ -39,67 +49,67 @@ class LinkMonitoringProcess:
         Returns:
             str: результат выполнения
         """
-        if not self.params:
-            res = "Couldn't monitor links without parameters"
-            logger.error(res)
-            return res
-        date: datetime = date or timezone.now()
-        source_q: Q = Q()
-        if source:
-            source_q &= Q(source=source)
-        # FIXME мб через self сделать? Тогда можно source и date в init передавать, а не в run
-        links_to_monitor: QuerySet = MonitoringLink.objects.filter(
-            source_q,
-            next_monitoring_date__lte=date,
-            is_active=True
-        )
-        if not await links_to_monitor.aexists():
+
+        if not await (self.yt_links | self.tt_links).aexists():
             res = "No links to monitor"
             logger.warning(res)
             return res
         try:
             # TODO refactor
-            # if not source or source == 'tiktok':
-            #     await self.tiktok_process()
-            # if not source or source == 'youtube':
-            #     await self.youtube_process()
+            # if not self.source or self.source == 'tiktok':
+            #     print('go tt')
+            #     await self._tiktok_process()
+            if not self.source or self.source == 'youtube':
+                print('go youtube')
+                await self._youtube_process()
 
-            await self._monitor_links(links_to_monitor)
             res = "Monitoring successful"
         except Exception as e:
             logger.error(e)
             res = f"Monitor links error: {e}"
         return res
 
-    async def tiktok_process(self):
-        """Процесс мониторинга ТТ ссылок"""
-        # TODO Нужно разделить процесс обработки ссылок по source
-        pass
+    # async def tiktok_process(self):
+    #     """Процесс мониторинга ТТ ссылок"""
+    #     # TODO Нужно разделить процесс обработки ссылок по source
+    #     pass
 
-    async def youtube_process(self):
-        """Процесс мониторинга YT ссылок"""
-        pass
+    async def _youtube_process(self):
+        music_parser: YtMusicVideoCountParser = YtMusicVideoCountParser()
+        profile_parser: YtUserVideoCountParser = YtUserVideoCountParser()
+        async with httpx.AsyncClient() as client:
+            profile_tasks: list[Task] = [asyncio.create_task(self.get_yt_user_video_count(link, client, profile_parser))
+                                         async for link in self.yt_links if '/source/' not in link.url]
+            music_tasks: list[Task] = [asyncio.create_task(self.get_yt_music_video_count(link, client, music_parser))
+                                       async for link in self.yt_links if '/source/' in link.url]
+            if profile_tasks:
+                print('Found {} profile tasks'.format(len(profile_tasks)))
+                results: tuple = await asyncio.gather(*profile_tasks)
+                await MonitoringResult.objects.abulk_create(results)
+            if music_tasks:
+                print('Found {} music tasks'.format(len(music_tasks)))
+                results: tuple = await asyncio.gather(*music_tasks)
+                await MonitoringResult.objects.abulk_create(results)
+        await MonitoringLink.objects.abulk_update(self.yt_links, fields=["next_monitoring_date"])
 
     @timer
-    async def _monitor_links(self, links: QuerySet[MonitoringLink]) -> None:
+    async def _tiktok_process(self) -> None:
         """
-        Запускает браузер, создает задание для каждой ссылки и сохраняет результаты мониторинга.
+        Запускает браузер, создает задание для каждой ссылки тиктока и сохраняет результаты мониторинга.
 
-        Args:
-            links (QuerySet[MonitoringLink]): Набор ссылок для мониторинга.
         """
         async with async_playwright() as p:
             browser: Browser = await p.chromium.launch(headless=False)  # headless=True чтоб браузер не открывался
             context: BrowserContext = await browser.new_context()
-            tasks: list[Task] = [asyncio.create_task(self._process_link(context, link)) async for link in links]
+            tasks: list[Task] = [asyncio.create_task(self._process_tt_link(context, link)) async for link in self.tt_links]
             if tasks:
                 results: tuple = await asyncio.gather(*tasks)
                 await MonitoringResult.objects.abulk_create(results)
             await browser.close()
-        await MonitoringLink.objects.abulk_update(links, fields=["next_monitoring_date"])
+        await MonitoringLink.objects.abulk_update(self.tt_links, fields=["next_monitoring_date"])
 
     @timer
-    async def _process_link(self, context: BrowserContext, link: MonitoringLink) -> MonitoringResult | None:
+    async def _process_tt_link(self, context: BrowserContext, link: MonitoringLink) -> MonitoringResult | None:
         """
         Обработчик ссылки: открывает новую страницу в браузере, получает контент со страницы, получает количество
         видео, создает результат мониторинга и обновляет дату следующего мониторинга.
@@ -121,9 +131,66 @@ class LinkMonitoringProcess:
             monitoring_link=link,
             video_count=video_count
         )
-        link.next_monitoring_date = timezone.now() + timedelta(hours=self.params.min_monitoring_timeout)
+        #link.next_monitoring_date = timezone.now() + timedelta(hours=self.params.min_monitoring_timeout)
         await page.close()
         return result
+
+    async def get_yt_user_video_count(self, link: MonitoringLink, client: httpx.AsyncClient, parser: YtUserVideoCountParser) -> MonitoringResult | None:
+        """Возвращает количество суммарное количество видео для одного ютуб профиля"""
+        # TODO Сделать 3 попытки, если none - не сдвигать next_monitoring_date
+        try:
+            resp: httpx.Response = await client.get(link.url)
+            resp.raise_for_status()
+        except Exception as e:
+            logger.error(e)
+            return None
+        print(link.url)
+        html_content: str = resp.text
+        print(html_content)
+        video_count: int | None = await parser.get_video_count(html_content)
+        print(f'{link.url} - {video_count}')
+        result: MonitoringResult = MonitoringResult(
+            monitoring_link=link,
+            video_count=video_count
+        )
+        return result
+
+    async def get_yt_music_video_count(self, link: MonitoringLink, client: httpx.AsyncClient, parser: YtMusicVideoCountParser) -> MonitoringResult | None:
+        """Возвращает суммарное количество коротких видео для одного ютуб звука"""
+        # TODO это пример использования, по аналогии нужно в MonitoringProcess.run() if MonitoringLink.source = youtube and 'source' in MonitoringLink.url
+        try:
+            resp: httpx.Response = await client.get(link.url)
+            resp.raise_for_status()
+        except Exception as e:
+            logger.error(e)
+            return None
+        print(link.url)
+        html_content: str = resp.text
+        print(html_content)
+        video_count: int | None = await parser.get_video_count(html_content)
+        result: MonitoringResult = MonitoringResult(
+            monitoring_link=link,
+            video_count=video_count
+        )
+        print(f'{link.url} - {video_count}')
+        return result
+
+    def _load_links(self, source_: str) -> QuerySet[MonitoringLink] | None:
+        if not self.params:
+            logger.error("Couldn't monitor links without parameters")
+            return None
+
+        source_q: Q = Q()
+        if source_:
+            source_q &= Q(source=source_)
+
+        links = MonitoringLink.objects.filter(
+            source_q,
+            next_monitoring_date__lte=self.date,
+            is_active=True
+        )
+        print(f'Found {len(links)} for source {source_}')
+        return links
 
     async def _get_page_content(self, link: MonitoringLink, page: Page) -> ElementHandle | None:
         """
