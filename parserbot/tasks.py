@@ -9,7 +9,7 @@ from scrappers.youtube.scrapper import YoutubeScrapper
 logger = logging.getLogger('scrappers')
 
 
-@shared_task
+@shared_task(name='parse_tiktok_task')
 def parse_tiktok(decoded_link, chat_id):
     scrapper = TikTokScrapper()
     try:
@@ -20,7 +20,7 @@ def parse_tiktok(decoded_link, chat_id):
     return res
 
 
-@shared_task
+@shared_task(name='parse_tiktok_by_sec_uid')
 def parse_tiktok_by_sec_uid(sec_uid, chat_id):
     scrapper = TikTokScrapper()
     try:
@@ -31,7 +31,7 @@ def parse_tiktok_by_sec_uid(sec_uid, chat_id):
     return res
 
 
-@shared_task
+@shared_task(name='parse_yt_music_link')
 def parse_yt_music_link(link, chat_id):
     scrapper = YoutubeScrapper()
     try:
