@@ -11,6 +11,16 @@ services:
     ports:
       - "8080:8080"
 
+  postgres:
+    image: postgres:16.2
+    env_file:
+      - dev.env
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./test_data:/test_data
+    ports:
+      - "127.0.0.1:5432:5432"
+
   redis:
     image: redis:alpine
     command:
@@ -18,8 +28,6 @@ services:
     restart: always
     ports:
       - "127.0.0.1:6379:6379"
-    depends_on:
-      - signature
 
   celery:
     build:
@@ -30,8 +38,8 @@ services:
     volumes:
       - .:/app
     depends_on:
-      - signature
       - redis
+      - postgres
 
   flower:
     image: mher/flower
@@ -43,6 +51,9 @@ services:
       - 8888:8888
     volumes:
       - flower_data:/data
+    depends_on:
+      - celery
 
 volumes:
   flower_data:
+  db_data:

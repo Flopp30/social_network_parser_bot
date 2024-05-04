@@ -1,3 +1,4 @@
+import asyncio
 import io
 import logging
 import time
@@ -5,7 +6,10 @@ from typing import Any
 
 import httpx
 import pandas as pd
+import requests
 from django.conf import settings
+from playwright.async_api import async_playwright
+
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +24,39 @@ def timer(func):
         return result
 
     return wrapper
+
+
+def adaptive_threshold(current_count):
+    if current_count < 500:
+        return 0.50  # 50% рост
+    elif current_count < 5000:
+        return 0.25  # 25% рост
+    else:
+        return 0.10  # 10% рост
+
+
+def analyze_growth(video_history: list[int]) -> float | None:
+    if len(video_history) < 3:
+        logger.error("Недостаточно данных для анализа.")
+        return None
+
+    weighted_growth_rate: float | None = compute_weighted_change(video_history)
+
+    return weighted_growth_rate
+
+
+def compute_weighted_change(history: list[int]) -> float | None:
+    if len(history) < 3:
+        logger.error("Недостаточно данных для анализа")
+        return None
+    try:
+        changes: list[float] = [(history[i + 1] - history[i]) / history[i] for i in range(len(history) - 1)]
+    except ZeroDivisionError:
+        logger.error("compute_weighted_change: Деление на ноль")
+        return None
+    weights: list[int] = [i + 1 for i in range(len(changes))]
+    weighted_change: float = sum(w * c for w, c in zip(weights, changes)) / sum(weights)
+    return weighted_change
 
 
 class Finder:
@@ -59,7 +96,8 @@ class Finder:
 
     def find_by_key_path(self, data: dict, key_path: list[str]) -> Any:
         """Ищет значение по ключам"""
-        # TODO кажется, работает не очень корректно, т.к. в случае, если она не находит - возвращается как-то значение, а хотелось бы получать None
+        # TODO кажется, работает не очень корректно, т.к. в случае, если не находит - возвращается какое-то значение, а хотелось бы получать None
+        #  подумать над более корректным вариантом
         while key_path:
             key = key_path.pop(0)
             if key in data:
@@ -82,6 +120,8 @@ class Finder:
 class HttpTelegramMessageSender:
     doc_url = settings.TELEGRAM_DOC_URL
     send_message_url = settings.TELEGRAM_MESSAGE_URL
+
+    #
     # doc_url = f"https://api.telegram.org/bot6288404871:AAHS6C29JiFkcrMspNkLxWB72_PLNO3K0V4/sendDocument"
     # send_message_url = f'https://api.telegram.org/bot6288404871:AAHS6C29JiFkcrMspNkLxWB72_PLNO3K0V4/sendMessage'
 
@@ -117,7 +157,7 @@ class HttpTelegramMessageSender:
 
     @classmethod
     async def send_text_message(cls, chat_id: int, text: str) -> str:
-        """Отправляет тестовое сообщение в tg"""
+        """Отправляет текстовое сообщение в tg"""
         params = {
             "chat_id": chat_id,
             "text": text
@@ -131,6 +171,26 @@ class HttpTelegramMessageSender:
         except Exception as e:
             if response:
                 logger.error(response.__dict__)
+            logger.error(e)
+            return 'With an error'
+
+        return 'Ok'
+
+    @classmethod
+    def sync_send_text_message(cls, chat_id: int, text: str) -> str:
+        """Синхронно отправляет текстовое сообщение в tg"""
+        params = {
+            "chat_id": chat_id,
+            "text": text
+        }
+        response = None
+        try:
+            response = requests.post(cls.send_message_url, json=params)
+            response.raise_for_status()
+            logger.info(f"Report send with status {response.status_code}")
+        except Exception as e:
+            if response:
+                logger.error(response.json())
             logger.error(e)
             return 'With an error'
 

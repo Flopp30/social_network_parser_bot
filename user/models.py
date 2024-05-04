@@ -28,6 +28,11 @@ class User(models.Model):
         verbose_name='Подтвержден',
         default=False,
     )
+    send_alerts = models.BooleanField(
+        verbose_name='Слать оповещения?',
+        default=False
+    )
+
     class Meta:
         verbose_name = 'Пользователь'
         verbose_name_plural = 'Пользователи'

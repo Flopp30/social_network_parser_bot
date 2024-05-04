@@ -159,7 +159,6 @@ class YoutubeScrapper:
 
         # тут лежит идентификатор уникальности запроса
         yt_command: dict | list = json.loads(re.search(r'window\[\'ytCommand\'\] = ({.*?});', html_content).group(1))
-
         query_params = finder.find_by_key_path(yt_command, self.QUERY_PARAM_PATH)
         if not isinstance(query_params, str):
             query_params = finder.find(query_params, 'params')

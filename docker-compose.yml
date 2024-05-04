@@ -39,13 +39,25 @@ services:
     container_name: flower
     command: celery flower --persisten=True --basic-auth="user1:password1"
     env_file:
-      - dev.env
+      - .env
     environment:
       - FLOWER_PORT=8888
     ports:
       - 8888:8888
     volumes:
       - flower_data:/data
+    depends_on:
+      - celery
+
+  postgres:
+    image: postgres:16.2
+    env_file:
+      - dev.env
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./test_data:/test_data
+    ports:
+      - "127.0.0.1:5432:5432"
 
   parserbot-bot:
     build:
@@ -60,6 +72,7 @@ services:
       - signature
       - redis
       - celery
+      - postgres
     volumes:
       - .:/app
     command:
@@ -86,9 +99,6 @@ services:
     environment:
       DJ_DEBUG: "True"
     depends_on:
-      - signature
-      - redis
-      - celery
       - parserbot-bot
     command:
       - sh
@@ -103,6 +113,7 @@ services:
       - '80:80'
     environment:
       UPSTREAM_SERVER: parserbot-admin:8000
+      FLOWER_SERVER: flower:8888
     volumes:
       - ./nginx-templates:/etc/nginx/templates/
       - nginx_static:/var/www/static/
