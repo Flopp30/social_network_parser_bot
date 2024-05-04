@@ -2,6 +2,22 @@ from telegram import InlineKeyboardMarkup, InlineKeyboardButton
 
 START_BOARD = InlineKeyboardMarkup(
     [
-        [InlineKeyboardButton('Начать!', callback_data='start')]
+        [InlineKeyboardButton('Парсинг', callback_data='parsing')],
+        [InlineKeyboardButton('Мониторинг', callback_data='monitoring')],
+    ]
+)
+
+PARSING_BOARD = InlineKeyboardMarkup(
+    [
+        [InlineKeyboardButton('Назад', callback_data='to_start_from_parsing')],
+    ]
+)
+
+MONITORING_BOARD = InlineKeyboardMarkup(
+    [
+        [InlineKeyboardButton('Назад', callback_data='to_start_from_monitoring')],
+        [InlineKeyboardButton('Добавить ссылку для отслеживания', callback_data='add_link')],
+        [InlineKeyboardButton('Получить список отслеживаемых ссылок', callback_data='get_list')],
+        [InlineKeyboardButton('Прекратить отслеживание ссылки', callback_data='remove_link')],
     ]
 )

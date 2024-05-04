@@ -1,0 +1,37 @@
+[tool.ruff]
+fix = true
+unsafe-fixes = true
+line-length = 160
+lint.select = [
+    "E",
+    "F",
+    "W",
+    "I",
+    "YTT",
+    "ASYNC",
+    "COM",
+    "T10",
+    "EXE",
+    "ICN",
+    "RSE",
+    "TCH",
+]
+lint.ignore = [
+    "E731",
+    "E741",
+    "F841",
+    "F842",
+    ]
+cache-dir = "/tmp/ruff-cache/"
+exclude = ["*/migrations/*"]
+
+[tool.ruff.lint.isort]
+no-lines-before = ["standard-library", "local-folder"]
+known-third-party = []
+known-local-folder = ["whole_app"]
+
+[tool.ruff.format]
+quote-style = "single"
+
+[tool.ruff.lint.extend-per-file-ignores]
+"tests/*.py" = ["ANN401", "S101", "S311"]

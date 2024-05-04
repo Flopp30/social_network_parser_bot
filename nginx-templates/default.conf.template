@@ -1,6 +1,9 @@
 upstream parserbot-bot {
     server ${UPSTREAM_SERVER};
 }
+upstream flower {
+    server ${FLOWER_SERVER};
+}
 
 server {
     listen 80;
@@ -17,6 +20,9 @@ server {
     location /media/ {
         root       /var/www/;
         autoindex  on;  # for easy debug
+    }
+    location /flower/ {
+        proxy_pass      http://flower;
     }
 
     location / {

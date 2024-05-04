@@ -35,11 +35,13 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_celery_beat',
 
     # custom
     "bot_parts",
     "user",
     "common",
+    "monitoring",
 ]
 
 MIDDLEWARE = [
@@ -72,6 +74,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'parserbot.wsgi.application'
 
+
 DATABASES = {
     'default': dj_database_url.parse(
         env('DJ_DB_URL', 'sqlite:///db.sqlite3'),
@@ -79,6 +82,7 @@ DATABASES = {
         conn_health_checks=True,
     )
 }
+
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -118,7 +122,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CELERY_BROKER = env('CELERY_BROKER')
 CELERY_BACKEND = env('CELERY_BACKEND')
-CELERY_IMPORTS = ('parserbot.tasks',)
+CELERY_IMPORTS = ('parserbot.tasks', 'parserbot.periodic_tasks',)
 
 
 LOGGING = {
