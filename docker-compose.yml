@@ -52,7 +52,7 @@ services:
   postgres:
     image: postgres:16.2
     env_file:
-      - dev.env
+      - .env
     volumes:
       - db_data:/var/lib/postgresql/data
       - ./test_data:/test_data
