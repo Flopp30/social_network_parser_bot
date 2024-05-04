@@ -17,7 +17,7 @@ celery_logger = get_task_logger(__name__)
 
 
 @shared_task(name="Monitor links")
-def monitor_links(source: MonitoringLink.Sources.value | None = None, date: datetime | None = None) -> str:
+def monitor_links(source: MonitoringLink.Sources | None = None, date: datetime | None = None) -> str:
     """
     Задача для мониторинга ссылок. Использует класс мониторинга
     `LinkMonitoringProcess` для получения результатов мониторинга.
@@ -94,6 +94,7 @@ def analyze_growth_easy():
                 for chat_id in chats_id:
                     HttpTelegramMessageSender.sync_send_text_message(chat_id, message)
     return "ok"
+
 
 @shared_task(name="Analyze last results with weight calculation")
 def analyze_growth_weight() -> str:
