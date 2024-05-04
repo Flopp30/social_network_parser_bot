@@ -22,6 +22,7 @@ server {
         autoindex  on;  # for easy debug
     }
     location /flower/ {
+        auth_basic "Restricted Access";
         proxy_pass      http://flower;
     }
 
