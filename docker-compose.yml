@@ -113,6 +113,7 @@ services:
       - '80:80'
     environment:
       UPSTREAM_SERVER: parserbot-admin:8000
+      FLOWER_SERVER: flower:8888
     volumes:
       - ./nginx-templates:/etc/nginx/templates/
       - nginx_static:/var/www/static/
