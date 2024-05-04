@@ -23,6 +23,10 @@ class Parameter(models.Model):
         verbose_name='Коэффициент оповещения',
         default=1.5
     )
+    chats_id_for_alert = models.CharField(
+        verbose_name='id чатов для оповещений (разделитель - запятая)',
+        max_length=500
+    )
 
     class Meta:
         verbose_name = 'Конфигурация'
