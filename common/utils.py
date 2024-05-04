@@ -6,8 +6,10 @@ from typing import Any
 
 import httpx
 import pandas as pd
+import requests
 from django.conf import settings
-from playwright.async_api import async_playwright, Browser, Page, ElementHandle
+from playwright.async_api import async_playwright
+
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +24,34 @@ def timer(func):
         return result
 
     return wrapper
+
+
+def adaptive_threshold(current_count):
+    if current_count < 200:
+        return 0.50  # 50% рост
+    elif current_count < 1000:
+        return 0.25  # 25% рост
+    else:
+        return 0.10  # 10% рост
+
+
+def analyze_growth(video_history: list[int]) -> float | None:
+    if len(video_history) < 3:
+        logger.error("Недостаточно данных для анализа.")
+        return None
+
+    weighted_growth_rate = compute_weighted_change(video_history)
+
+    return weighted_growth_rate
+
+
+def compute_weighted_change(history):
+    if len(history) < 3:
+        return 0
+    changes = [(history[i + 1] - history[i]) / history[i] for i in range(len(history) - 1)]
+    weights = [i + 1 for i in range(len(changes))]
+    weighted_change = sum(w * c for w, c in zip(weights, changes)) / sum(weights)
+    return weighted_change
 
 
 class Finder:
@@ -83,11 +113,12 @@ class Finder:
 
 
 class HttpTelegramMessageSender:
-    # doc_url = settings.TELEGRAM_DOC_URL
-    # send_message_url = settings.TELEGRAM_MESSAGE_URL
+    doc_url = settings.TELEGRAM_DOC_URL
+    send_message_url = settings.TELEGRAM_MESSAGE_URL
+
     #
-    doc_url = f"https://api.telegram.org/bot6288404871:AAHS6C29JiFkcrMspNkLxWB72_PLNO3K0V4/sendDocument"
-    send_message_url = f'https://api.telegram.org/bot6288404871:AAHS6C29JiFkcrMspNkLxWB72_PLNO3K0V4/sendMessage'
+    # doc_url = f"https://api.telegram.org/bot6288404871:AAHS6C29JiFkcrMspNkLxWB72_PLNO3K0V4/sendDocument"
+    # send_message_url = f'https://api.telegram.org/bot6288404871:AAHS6C29JiFkcrMspNkLxWB72_PLNO3K0V4/sendMessage'
 
     @classmethod
     async def send_csv_doc(cls, chat_id: int, collection: dict | list | pd.DataFrame, caption: str, file_name: str = 'report.csv') -> str:
@@ -140,6 +171,26 @@ class HttpTelegramMessageSender:
 
         return 'Ok'
 
+    @classmethod
+    def sync_send_text_message(cls, chat_id: int, text: str) -> str:
+        """Синхронно отправляет текстовое сообщение в tg"""
+        params = {
+            "chat_id": chat_id,
+            "text": text
+        }
+        response = None
+        try:
+            response = requests.post(cls.send_message_url, json=params)
+            response.raise_for_status()
+            logger.info(f"Report send with status {response.status_code}")
+        except Exception as e:
+            if response:
+                logger.error(response.json())
+            logger.error(e)
+            return 'With an error'
+
+        return 'Ok'
+
 
 async def open_page(url, context):
     page = await context.new_page()
@@ -149,7 +200,6 @@ async def open_page(url, context):
 
 
 async def test():
-
     urls = ['https://www.example.com', 'https://www.google.com', 'https://www.github.com']
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=False)
@@ -158,4 +208,4 @@ async def test():
         await asyncio.gather(*async_tasks)
         await browser.close()
 
-#asyncio.run(test())
+# asyncio.run(test())
