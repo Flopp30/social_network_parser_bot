@@ -25,7 +25,7 @@ class LinkMonitoringProcess:
     }
     YT_USER_ATTEMPTS: int = 3
 
-    def __init__(self, source: str | None = None, date: datetime | None = None):
+    def __init__(self, source: MonitoringLink.Sources | None = None, date: datetime | None = None):
         """
         Инициализация процесса мониторинга
 
@@ -36,9 +36,7 @@ class LinkMonitoringProcess:
         self.params: Parameter = Parameter.objects.first()
         self.date: datetime = date or timezone.now()
         self.source: str = source
-        # TODO Исправить лишние загрузки ссылок, если source is not None
-        self.yt_links: QuerySet[MonitoringLink] = self._load_links('youtube')
-        self.tt_links: QuerySet[MonitoringLink] = self._load_links('tiktok')
+        self.yt_links, self.tt_links = self._load_links()
 
     async def run(self):
         """
@@ -177,21 +175,21 @@ class LinkMonitoringProcess:
         logger.debug(f'{link.url} - {video_count}')
         return result
 
-    def _load_links(self, source_: str) -> QuerySet[MonitoringLink] | None:
+    def _load_links(self)\
+            -> tuple[QuerySet[MonitoringLink] | None, QuerySet[MonitoringLink] | None]:
+        yt_links, tt_links = None, None
+        link_qs = MonitoringLink.objects.filter(
+                next_monitoring_date__lte=self.date,
+                is_active=True
+            )
         if not self.params:
             logger.error("Couldn't monitor links without parameters")
-            return None
-
-        source_q: Q = Q()
-        if source_:
-            source_q &= Q(source=source_)
-
-        links = MonitoringLink.objects.filter(
-            source_q,
-            next_monitoring_date__lte=self.date,
-            is_active=True
-        )
-        return links
+            return yt_links, tt_links
+        if not self.source or self.source == MonitoringLink.Sources.TIKTOK:
+            tt_links = link_qs.filter(source=MonitoringLink.Sources.TIKTOK)
+        if not self.source or self.source == MonitoringLink.Sources.YOUTUBE:
+            yt_links = link_qs.filter(source=MonitoringLink.Sources.YOUTUBE)
+        return yt_links, tt_links
 
     async def _get_page_content(self, link: MonitoringLink, page: Page) -> ElementHandle | None:
         """

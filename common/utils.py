@@ -27,9 +27,9 @@ def timer(func):
 
 
 def adaptive_threshold(current_count):
-    if current_count < 200:
+    if current_count < 500:
         return 0.50  # 50% рост
-    elif current_count < 1000:
+    elif current_count < 5000:
         return 0.25  # 25% рост
     else:
         return 0.10  # 10% рост
@@ -40,17 +40,22 @@ def analyze_growth(video_history: list[int]) -> float | None:
         logger.error("Недостаточно данных для анализа.")
         return None
 
-    weighted_growth_rate = compute_weighted_change(video_history)
+    weighted_growth_rate: float | None = compute_weighted_change(video_history)
 
     return weighted_growth_rate
 
 
-def compute_weighted_change(history):
+def compute_weighted_change(history: list[int]) -> float | None:
     if len(history) < 3:
-        return 0
-    changes = [(history[i + 1] - history[i]) / history[i] for i in range(len(history) - 1)]
-    weights = [i + 1 for i in range(len(changes))]
-    weighted_change = sum(w * c for w, c in zip(weights, changes)) / sum(weights)
+        logger.error("Недостаточно данных для анализа")
+        return None
+    try:
+        changes: list[float] = [(history[i + 1] - history[i]) / history[i] for i in range(len(history) - 1)]
+    except ZeroDivisionError:
+        logger.error("compute_weighted_change: Деление на ноль")
+        return None
+    weights: list[int] = [i + 1 for i in range(len(changes))]
+    weighted_change: float = sum(w * c for w, c in zip(weights, changes)) / sum(weights)
     return weighted_change
 
 
@@ -190,22 +195,3 @@ class HttpTelegramMessageSender:
             return 'With an error'
 
         return 'Ok'
-
-
-async def open_page(url, context):
-    page = await context.new_page()
-    await page.goto(url)
-    # Выполните здесь любые действия на странице
-    await asyncio.sleep(5)  # Для примера подождем 5 секунд
-
-
-async def test():
-    urls = ['https://www.example.com', 'https://www.google.com', 'https://www.github.com']
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=False)
-        context = await browser.new_context()
-        async_tasks = [open_page(url, context) for url in urls]
-        await asyncio.gather(*async_tasks)
-        await browser.close()
-
-# asyncio.run(test())

@@ -66,7 +66,7 @@ class MonitoringLink(models.Model):
         verbose_name_plural = 'Ссылки для мониторинга'
 
     def __str__(self):
-        return self.url
+        return f'{self.id} :: {self.url}'
 
 
 class MonitoringResult(models.Model):
