@@ -9,13 +9,13 @@ START_BOARD = InlineKeyboardMarkup(
 
 PARSING_BOARD = InlineKeyboardMarkup(
     [
-        [InlineKeyboardButton('Назад', callback_data='to_start')],
+        [InlineKeyboardButton('Назад', callback_data='to_start_from_parsing')],
     ]
 )
 
 MONITORING_BOARD = InlineKeyboardMarkup(
     [
-        [InlineKeyboardButton('Назад', callback_data='to_start')],
+        [InlineKeyboardButton('Назад', callback_data='to_start_from_monitoring')],
         [InlineKeyboardButton('Добавить ссылку для отслеживания', callback_data='add_link')],
         [InlineKeyboardButton('Получить список отслеживаемых ссылок', callback_data='get_list')],
         [InlineKeyboardButton('Прекратить отслеживание ссылки', callback_data='remove_link')],

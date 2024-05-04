@@ -5,7 +5,7 @@ from telegram.ext import ContextTypes
 
 from bot_parts.helpers import check_bot_context, WelcomeRedirectType
 from bot_parts.keyboards import START_BOARD, MONITORING_BOARD, PARSING_BOARD
-from bot_parts.messages import MESSAGE_MAP
+from bot_parts.messages import MessageContainer
 
 
 async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -15,11 +15,11 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await check_bot_context(update, context, force_update=True)
     # проверяем, подтвержден ли он
     if context.user_data['user'].is_approved:
-        message = MESSAGE_MAP['start_approved']
+        message = MessageContainer.start_approved
         keyboard = START_BOARD
         state = "AWAIT_WELCOME_CHOICE"
     else:
-        message = MESSAGE_MAP['start_not_approved']
+        message = MessageContainer.start_not_approved
         keyboard = None
         state = "START"
 
@@ -44,22 +44,20 @@ async def welcome_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, **
     if not redirect_callback:
         redirect_callback = update.callback_query.data
 
-    message_key: str
     keyboard: InlineKeyboardMarkup | None
     state: str
     # parsing button
     if redirect_callback == WelcomeRedirectType.PARSING:
-        message_key = 'parsing_welcome'
+        message = MessageContainer.parsing_welcome
         keyboard = PARSING_BOARD
         state = 'AWAIT_LINK_TO_PARSE'
 
     # monitoring button
     else:
-        message_key = 'monitoring_welcome'
+        message = MessageContainer.monitoring_welcome
         keyboard = MONITORING_BOARD
         state = 'AWAIT_MONITORING_CHOICE'
-        
-    message: str = MESSAGE_MAP.get(message_key)
+
     await context.bot.send_message(
         update.effective_chat.id,
         text=message,
