@@ -74,6 +74,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'parserbot.wsgi.application'
 
+
 DATABASES = {
     'default': dj_database_url.parse(
         env('DJ_DB_URL', 'sqlite:///db.sqlite3'),
@@ -81,6 +82,7 @@ DATABASES = {
         conn_health_checks=True,
     )
 }
+
 
 AUTH_PASSWORD_VALIDATORS = [
     {

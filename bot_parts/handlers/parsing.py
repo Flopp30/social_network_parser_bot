@@ -4,7 +4,7 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from bot_parts.helpers import check_bot_context, WelcomeRedirectType
-from bot_parts.messages import MESSAGE_MAP
+from bot_parts.messages import MessageContainer
 from common.validators import LinkValidator
 from parserbot.tasks import parse_tiktok, parse_tiktok_by_sec_uid, parse_yt_music_link
 from bot_parts.handlers.start import welcome_handler, start_handler
@@ -15,25 +15,25 @@ async def add_link_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await check_bot_context(update, context)
 
     # редирект назад
-    if update.callback_query and update.callback_query.data == 'to_start':
+    if update.callback_query and update.callback_query.data == 'to_start_from_parsing':
         context.user_data['user'].state = 'START'
         return await start_handler(update, context)
 
-    if decoded_link := LinkValidator.validate(update.message.text):
+    dirty_link: str = update.message.text
+    if decoded_link := LinkValidator.validate(dirty_link):
         if 'tiktok' in decoded_link:
             parse_tiktok.apply_async(args=[decoded_link, update.effective_chat.id])
         elif 'youtube' in decoded_link:
             parse_yt_music_link.apply_async(args=[decoded_link, update.effective_chat.id])
-        message_key = 'parsing_success'
+        message = MessageContainer.parsing_success
 
-    elif update.message.text.startswith('MS'):
+    elif dirty_link.startswith('MS'):
         # парсинг по sec_uid (для тиктока)
         parse_tiktok_by_sec_uid.apply_async(args=[update.message.text.strip(), update.effective_chat.id])
-        message_key = 'parsing_by_sec_uid'
+        message = MessageContainer.parsing_by_sec_uid
     else:
-        message_key = 'link_validation_error'
+        message = MessageContainer.link_validation_error.format(link=dirty_link)
 
-    message = MESSAGE_MAP.get(message_key)
     await context.bot.send_message(
         update.effective_chat.id,
         text=message
@@ -50,6 +50,6 @@ async def command_parse_by_sec_uid(update: Update, context: ContextTypes.DEFAULT
     parse_tiktok_by_sec_uid.apply_async(args=[sec_uid, update.effective_chat.id])
     await context.bot.send_message(
         update.effective_chat.id,
-        text=MESSAGE_MAP['parsing_by_sec_uid']
+        text=MessageContainer.parsing_by_sec_uid
     )
     return await welcome_handler(update, context, redirect_callback=WelcomeRedirectType.PARSING)
