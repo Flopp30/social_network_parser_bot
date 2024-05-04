@@ -22,7 +22,7 @@ server {
         autoindex  on;  # for easy debug
     }
     location /flower/ {
-        proxy_pass      http://flower
+        proxy_pass      http://flower;
     }
 
     location / {
