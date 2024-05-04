@@ -21,9 +21,13 @@ server {
         root       /var/www/;
         autoindex  on;  # for easy debug
     }
-    location /flower/ {
-        auth_basic "Restricted Access";
-        proxy_pass      http://flower;
+    location /worker/ {
+        proxy_pass http://flower;
+        proxy_set_header Host $host;
+        proxy_redirect off;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
     }
 
     location / {
