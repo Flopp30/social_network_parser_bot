@@ -23,6 +23,7 @@ class LinkMonitoringProcess:
         'K': 1000,
         'M': 1000_000,
     }
+    YT_USER_ATTEMPTS: int = 3
 
     def __init__(self, source: str | None = None, date: datetime | None = None):
         """
@@ -35,6 +36,7 @@ class LinkMonitoringProcess:
         self.params: Parameter = Parameter.objects.first()
         self.date: datetime = date or timezone.now()
         self.source: str = source
+        # TODO Исправить лишние загрузки ссылок, если source is not None
         self.yt_links: QuerySet[MonitoringLink] = self._load_links('youtube')
         self.tt_links: QuerySet[MonitoringLink] = self._load_links('tiktok')
 
@@ -49,31 +51,26 @@ class LinkMonitoringProcess:
         Returns:
             str: результат выполнения
         """
-
+        if not self.params:
+            res = 'No parameters'
+            logger.error(res)
+            return res
         if not await (self.yt_links | self.tt_links).aexists():
             res = "No links to monitor"
             logger.warning(res)
             return res
         try:
-            # TODO refactor
-            # if not self.source or self.source == 'tiktok':
-            #     print('go tt')
-            #     await self._tiktok_process()
+            if not self.source or self.source == 'tiktok':
+                await self._tiktok_process()
             if not self.source or self.source == 'youtube':
-                print('go youtube')
                 await self._youtube_process()
-
             res = "Monitoring successful"
         except Exception as e:
             logger.error(e)
             res = f"Monitor links error: {e}"
         return res
 
-    # async def tiktok_process(self):
-    #     """Процесс мониторинга ТТ ссылок"""
-    #     # TODO Нужно разделить процесс обработки ссылок по source
-    #     pass
-
+    @timer
     async def _youtube_process(self):
         music_parser: YtMusicVideoCountParser = YtMusicVideoCountParser()
         profile_parser: YtUserVideoCountParser = YtUserVideoCountParser()
@@ -83,11 +80,11 @@ class LinkMonitoringProcess:
             music_tasks: list[Task] = [asyncio.create_task(self.get_yt_music_video_count(link, client, music_parser))
                                        async for link in self.yt_links if '/source/' in link.url]
             if profile_tasks:
-                print('Found {} profile tasks'.format(len(profile_tasks)))
+                logger.debug('Found {} profile tasks'.format(len(profile_tasks)))
                 results: tuple = await asyncio.gather(*profile_tasks)
                 await MonitoringResult.objects.abulk_create(results)
             if music_tasks:
-                print('Found {} music tasks'.format(len(music_tasks)))
+                logger.debug('Found {} music tasks'.format(len(music_tasks)))
                 results: tuple = await asyncio.gather(*music_tasks)
                 await MonitoringResult.objects.abulk_create(results)
         await MonitoringLink.objects.abulk_update(self.yt_links, fields=["next_monitoring_date"])
@@ -131,48 +128,53 @@ class LinkMonitoringProcess:
             monitoring_link=link,
             video_count=video_count
         )
-        #link.next_monitoring_date = timezone.now() + timedelta(hours=self.params.min_monitoring_timeout)
+        link.next_monitoring_date = timezone.now() + timedelta(hours=self.params.min_monitoring_timeout)
         await page.close()
         return result
 
+    @timer
     async def get_yt_user_video_count(self, link: MonitoringLink, client: httpx.AsyncClient, parser: YtUserVideoCountParser) -> MonitoringResult | None:
         """Возвращает количество суммарное количество видео для одного ютуб профиля"""
-        # TODO Сделать 3 попытки, если none - не сдвигать next_monitoring_date
-        try:
-            resp: httpx.Response = await client.get(link.url)
-            resp.raise_for_status()
-        except Exception as e:
-            logger.error(e)
-            return None
-        print(link.url)
-        html_content: str = resp.text
-        print(html_content)
-        video_count: int | None = await parser.get_video_count(html_content)
-        print(f'{link.url} - {video_count}')
-        result: MonitoringResult = MonitoringResult(
-            monitoring_link=link,
-            video_count=video_count
-        )
-        return result
+        attempt: int = 0
+        resp: httpx.Response | None = None
+        while attempt < self.YT_USER_ATTEMPTS:
+            try:
+                resp: httpx.Response = await client.get(link.url)
+                resp.raise_for_status()
+            except Exception as e:
+                logger.error(f"An unexpected error occurred on attempt {attempt + 1} for URL {link.url}: {e}")
+            html_content: str = resp.text
+            video_count: int | None = await parser.get_video_count(html_content)
+            logger.debug(f'{link.url} - {video_count}')
+            if video_count:
+                result: MonitoringResult = MonitoringResult(
+                    monitoring_link=link,
+                    video_count=video_count
+                )
+                link.next_monitoring_date = timezone.now() + timedelta(hours=self.params.min_monitoring_timeout)
+                return result
+            else:
+                logger.error(f"Failed to parse video count on attempt {attempt + 1} for URL {link.url}")
+            attempt += 1
+        return None
 
+    @timer
     async def get_yt_music_video_count(self, link: MonitoringLink, client: httpx.AsyncClient, parser: YtMusicVideoCountParser) -> MonitoringResult | None:
         """Возвращает суммарное количество коротких видео для одного ютуб звука"""
-        # TODO это пример использования, по аналогии нужно в MonitoringProcess.run() if MonitoringLink.source = youtube and 'source' in MonitoringLink.url
         try:
             resp: httpx.Response = await client.get(link.url)
             resp.raise_for_status()
         except Exception as e:
             logger.error(e)
             return None
-        print(link.url)
         html_content: str = resp.text
-        print(html_content)
         video_count: int | None = await parser.get_video_count(html_content)
         result: MonitoringResult = MonitoringResult(
             monitoring_link=link,
             video_count=video_count
         )
-        print(f'{link.url} - {video_count}')
+        link.next_monitoring_date = timezone.now() + timedelta(hours=self.params.min_monitoring_timeout)
+        logger.debug(f'{link.url} - {video_count}')
         return result
 
     def _load_links(self, source_: str) -> QuerySet[MonitoringLink] | None:
@@ -189,7 +191,6 @@ class LinkMonitoringProcess:
             next_monitoring_date__lte=self.date,
             is_active=True
         )
-        print(f'Found {len(links)} for source {source_}')
         return links
 
     async def _get_page_content(self, link: MonitoringLink, page: Page) -> ElementHandle | None:
