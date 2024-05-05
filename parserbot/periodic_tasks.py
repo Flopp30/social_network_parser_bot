@@ -67,16 +67,25 @@ def delete_redundant_results() -> str:
     return "ok"
 
 
+def get_chat_ids(params: Parameter) -> list[int]:
+    """Возвращает список id для отправки уведомлений в ТГ"""
+    id_from_param: list[int] = []
+    for id_ in params.chats_id_for_alert.split(','):
+        if id_.isdigit():
+            id_from_param.append(int(id_))
+    id_from_param.extend(User.objects.filter(send_alerts=True).values_list('chat_id', flat=True))
+    # id_from_param.extend(map(int, filter(lambda x: x.is_digit(), params.chats_id_for_alert.split(','))))
+    return id_from_param
+
+
+
 @shared_task(name='Analyze last two results')
 def analyze_growth_easy():
     """Делим последнее на предпоследнее"""
     params = Parameter.objects.first()
     if not params:
         return "Couldn't analyze growth without params"
-    chats_id = (
-            list(map(int, params.chats_id_for_alert.split(','))) +
-            list(User.objects.filter(send_alerts=True).values_list('chat_id', flat=True))
-    )
+    chat_ids: list[int] = get_chat_ids(params)
     links = MonitoringLink.objects.all()
     for link in links:
         results = MonitoringResult.objects.filter(monitoring_link=link).order_by('-created_at')[:2]
@@ -91,9 +100,10 @@ def analyze_growth_easy():
                     f'Пороговый коэффициент: {params.alert_ratio}'
                 )
                 celery_logger.info('ALERT! Growth ratio for link {}: {}'.format(link.url, growth_ratio))
-                for chat_id in chats_id:
+                for chat_id in chat_ids:
                     HttpTelegramMessageSender.sync_send_text_message(chat_id, message)
     return "ok"
+
 
 @shared_task(name="Analyze last results with weight calculation")
 def analyze_growth_weight() -> str:
@@ -102,10 +112,7 @@ def analyze_growth_weight() -> str:
     if not params:
         return "Couldn't analyze growth without params"
     # TODO пофиксить valueerror от string в случае ошибки
-    chats_id: list[int] = (
-            list(map(int, params.chats_id_for_alert.split(','))) +
-            [user.chat_id for user in User.objects.filter(send_alerts=True).only('chat_id')]
-    )
+    chat_ids: list[int] = get_chat_ids(params)
     links: QuerySet[MonitoringLink] = MonitoringLink.objects.all()
     for link in links:
         video_count_history: list[int] = list(
@@ -132,6 +139,6 @@ def analyze_growth_weight() -> str:
                 f'Текущий порог: {threshold * 100:.2f}%\n'
                 f'Значения, на которых нашлось превышение: {video_count_history} '
             )
-            for chat_id in chats_id:
+            for chat_id in chat_ids:
                 HttpTelegramMessageSender.sync_send_text_message(chat_id, message)
     return "ok"

@@ -25,7 +25,9 @@ class Parameter(models.Model):
     )
     chats_id_for_alert = models.CharField(
         verbose_name='id чатов для оповещений (разделитель - запятая)',
-        max_length=500
+        max_length=500,
+        null=True,
+        blank=True,
     )
 
     class Meta:
