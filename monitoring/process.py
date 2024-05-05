@@ -94,7 +94,7 @@ class LinkMonitoringProcess:
 
         """
         async with async_playwright() as p:
-            browser: Browser = await p.chromium.launch(headless=False)  # headless=True чтоб браузер не открывался
+            browser: Browser = await p.chromium.launch(headless=True)  # headless=True чтоб браузер не открывался
             context: BrowserContext = await browser.new_context()
             tasks: list[Task] = [asyncio.create_task(self._process_tt_link(context, link)) async for link in self.tt_links]
             if tasks:
