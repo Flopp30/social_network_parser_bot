@@ -53,6 +53,7 @@ services:
       - flower_data:/data
     depends_on:
       - celery
+      - redis
 
 volumes:
   flower_data:
