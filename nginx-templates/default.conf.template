@@ -8,6 +8,7 @@ upstream flower {
 server {
     listen 80;
     include mime.types;
+    server_name  94.241.174.138 *.barskiy.pro barskiy.pro
     types
     {
         application/javascript mjs;
