@@ -24,7 +24,7 @@ server {
     }
 
     location ~ ^/flower/? {
-        proxy_pass   http:/flower;
+        proxy_pass   http://flower;
         rewrite ^/flower/?(.*)$ /$1 break;
     }
     location / {
