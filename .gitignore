@@ -162,3 +162,5 @@ cython_debug/
 dev.env
 *.csv
 tiktok-signature*
+.htpasswd
+logs

@@ -116,7 +116,7 @@ services:
       - ./nginx-templates:/etc/nginx/templates/
       - nginx_static:/var/www/static/
       - nginx_media:/var/www/media/
-      - /etc/nginx/.htpasswd:/etc/nginx/.htpasswd
+      - .htpasswd:/etc/nginx/.htpasswd
     depends_on:
       - parserbot-admin
 
