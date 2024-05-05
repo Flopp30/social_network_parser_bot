@@ -8,20 +8,8 @@ upstream flower {
 server {
     listen 80;
     include mime.types;
-    server_name  94.241.174.138 *.barskiy.pro barskiy.pro;
-    types
-    {
-        application/javascript mjs;
-    }
-    location /static/ {
-        root       /var/www/;
-        autoindex  on;  # for easy debug
-    }
+    server_name flower.*.barskiy.pro
 
-    location /media/ {
-        root       /var/www/;
-        autoindex  on;  # for easy debug
-    }
     location ~ ^/flower/? {
         rewrite ^/flower/?(.*)$ /$1 break;
 
@@ -38,6 +26,26 @@ server {
         auth_basic  "Restricted";
         auth_basic_user_file  /etc/nginx/.htpasswd;
     }
+}
+
+server {
+    listen 80;
+    include mime.types;
+    server_name  94.241.174.138
+    types
+    {
+        application/javascript mjs;
+    }
+    location /static/ {
+        root       /var/www/;
+        autoindex  on;  # for easy debug
+    }
+
+    location /media/ {
+        root       /var/www/;
+        autoindex  on;  # for easy debug
+    }
+
     location / {
         proxy_pass       http://parserbot-bot;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
