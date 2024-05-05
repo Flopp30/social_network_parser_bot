@@ -17,7 +17,7 @@ logger = logging.getLogger('monitoring')
 
 
 class LinkMonitoringProcess:
-    TIMEOUT_MILLISECONDS: int = 10000
+    TIMEOUT_MILLISECONDS: int = 100000
     TIMEOUT_ATTEMPTS: int = 3
     SCALE_MAP: dict = {
         'K': 1000,
