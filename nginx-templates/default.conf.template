@@ -8,7 +8,7 @@ upstream flower {
 server {
     listen 80;
     include mime.types;
-    server_name flower.*.barskiy.pro;
+    server_name *.barskiy.pro;
 
     location ~ ^/flower/? {
         rewrite ^/flower/?(.*)$ /$1 break;
