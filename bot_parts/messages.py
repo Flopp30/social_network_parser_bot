@@ -51,7 +51,10 @@ class MessageContainer:
         'Нет отслеживаемых ссылок.'
     )
     # добавление
-    monitoring_wait_link: str = 'Пришлите ссылку для добавления её в мониторинг. Если несколько - через shift + enter'
+    monitoring_wait_link: str = (
+        'Пришлите ссылку для добавления её в мониторинг.\n'
+        'Для добавления нескольких ссылок за раз - разделите их пробелом или через shift + enter'
+    )
     monitoring_add_multiple_links: str = (
         'Успешно добавлено {success_count} ссылок.\n'
         'Создано: {created_count}\n'

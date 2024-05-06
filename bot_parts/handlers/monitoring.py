@@ -9,7 +9,7 @@ from bot_parts.handlers.start import welcome_handler, start_handler
 from bot_parts.helpers import WelcomeRedirectType
 from bot_parts.messages import MessageContainer
 from common.validators import LinkValidator, ValidationScopes
-from monitoring.helpers import ensure_monitoring_link
+from monitoring.utils import ensure_monitoring_link
 from monitoring.models import MonitoringLink
 
 
@@ -117,7 +117,11 @@ async def ensure_monitoring_links(urls: list[str]) -> str:
 
 async def add_link_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Добавляет ссылки в мониторинг"""
-    dirty_urls: list[str] = update.message.text.split('\n')
+    dirty_urls: list[str]
+    if '\n' in update.message.text:
+        dirty_urls: list[str] = update.message.text.split('\n')
+    else:
+        dirty_urls = update.message.text.split(' ')
 
     message: str = await ensure_monitoring_links(dirty_urls)
 
