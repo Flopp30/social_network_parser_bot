@@ -42,7 +42,7 @@ class MonitoringLinkAdmin(admin.ModelAdmin):
 @admin.register(MonitoringResult)
 class MonitoringResultAdmin(admin.ModelAdmin):
     list_display = ('url', 'video_count', 'created_at',)
-    search_fields = ('url',)
+    search_fields = ('monitoring_link__url',)
     list_filter = ('created_at',)
 
     def url(self, obj):
