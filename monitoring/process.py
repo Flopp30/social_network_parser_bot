@@ -62,9 +62,9 @@ class LinkMonitoringProcess:
 
 
 class YtMonitoringProcess:
-    music_parser: YtMusicVideoCountParser
-    profile_parser: YtUserVideoCountParser
-    REQUEST_USER_ATTEMPTS = 3
+    music_parser: YtMusicVideoCountParser = YtMusicVideoCountParser
+    profile_parser: YtUserVideoCountParser = YtUserVideoCountParser
+    REQUEST_USER_ATTEMPTS: int = 3
 
     def __init__(self, param: Parameter | None = None, date: datetime | None = None, links: QuerySet[MonitoringLink] | None = None):
         self.params: Parameter = param or Parameter.objects.first()
