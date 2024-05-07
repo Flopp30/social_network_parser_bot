@@ -95,14 +95,14 @@ class YtMonitoringProcess:
                 logger.debug('Found {} profile links'.format(len(profile_tasks)))
                 for chunk in chunked(profile_tasks, self.params.max_link_per_run_count):
                     results: tuple = await asyncio.gather(*chunk)
-                    await MonitoringResult.objects.abulk_create(results)
+                    await MonitoringResult.objects.abulk_create(*filter(lambda x: x is not None, results))
                     await asyncio.sleep(self.params.monitoring_iteration_timeout_seconds)
 
             if music_tasks:
                 logger.debug('Found {} music links'.format(len(music_tasks)))
                 for chunk in chunked(music_tasks, self.params.max_link_per_run_count):
                     results: tuple = await asyncio.gather(*chunk)
-                    await MonitoringResult.objects.abulk_create(results)
+                    await MonitoringResult.objects.abulk_create(*filter(lambda x: x is not None, results))
                     await asyncio.sleep(self.params.monitoring_iteration_timeout_seconds)
 
         await MonitoringLink.objects.abulk_update(self.links, fields=["next_monitoring_date"])
@@ -148,8 +148,8 @@ class YtMonitoringProcess:
             monitoring_link=link,
             video_count=video_count
         )
-        link.next_monitoring_date = timezone.now() + timedelta(hours=self.params.min_monitoring_timeout)
         logger.debug(f'{link.url} - {video_count}')
+        link.next_monitoring_date = timezone.now() + timedelta(hours=self.params.min_monitoring_timeout)
         return result
 
 
@@ -189,7 +189,7 @@ class TtMonitoringProcess:
                 logger.info(f'Found {len(tasks)} tt links')
                 for chunk in chunked(tasks, self.params.max_link_per_run_count):
                     results: tuple = await asyncio.gather(*chunk)
-                    await MonitoringResult.objects.abulk_create(results)
+                    await MonitoringResult.objects.abulk_create(*filter(lambda x: x is not None, results))
                     await asyncio.sleep(self.params.monitoring_iteration_timeout_seconds)
             await browser.close()
         await MonitoringLink.objects.abulk_update(self.links, fields=["next_monitoring_date"])
@@ -217,8 +217,8 @@ class TtMonitoringProcess:
             monitoring_link=link,
             video_count=video_count
         )
-        link.next_monitoring_date = timezone.now() + timedelta(hours=self.params.min_monitoring_timeout)
         await page.close()
+        link.next_monitoring_date = timezone.now() + timedelta(hours=self.params.min_monitoring_timeout)
         return result
 
     async def _get_page_content(self, link: MonitoringLink, page: Page) -> ElementHandle | None:
