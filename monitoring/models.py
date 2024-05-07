@@ -5,11 +5,23 @@ from django.db.models import TextChoices
 class Parameter(models.Model):
     max_link_per_process_count = models.PositiveIntegerField(
         default=1000,
-        verbose_name='Максимальное количество ссылок для парсинга за один запуск'
+        verbose_name='Количество ссылок для парсинга',
+        help_text='Максимальное количество ссылок для парсинга за один запуск',
+    )
+    max_link_per_run_count = models.PositiveIntegerField(
+        default=10,
+        verbose_name='Количество ссылок для парсинга',
+        help_text='Максимальное количество ссылок для парсинга за одну итерацию',
+    )
+    monitoring_iteration_timeout_seconds = models.PositiveIntegerField(
+        default=60,
+        verbose_name='Таймаут между итерациями',
+        help_text='Таймаут между итерациями мониторинга (в секундах)'
     )
     min_monitoring_timeout = models.PositiveIntegerField(
-        default=24,
-        verbose_name='Минимальный таймаут между запусками мониторинга (в часах)'
+        default=8,
+        verbose_name='Таймаут между запусками мониторинга',
+        help_text='Минимальный таймаут между запусками мониторинга (в часах) для одной ссылки',
     )
     max_monitoring_count = models.PositiveIntegerField(
         default=10,
@@ -17,14 +29,16 @@ class Parameter(models.Model):
     )
     min_monitoring_count_before_report = models.PositiveIntegerField(
         default=3,
-        verbose_name='Минимальное количество отслеживаний перед созданием отчёта'
+        verbose_name='Минимальное количество отслеживаний',
+        help_text='Минимальное количество отслеживаний перед созданием отчёта',
     )
     alert_ratio = models.FloatField(
         verbose_name='Коэффициент оповещения',
         default=1.5
     )
     chats_id_for_alert = models.CharField(
-        verbose_name='id чатов для оповещений (разделитель - запятая)',
+        verbose_name='id чатов для оповещений',
+        help_text='(разделитель - запятая)',
         max_length=500,
         null=True,
         blank=True,

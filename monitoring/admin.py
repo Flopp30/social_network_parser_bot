@@ -13,6 +13,8 @@ from monitoring.models import (
 class ParameterAdmin(admin.ModelAdmin):
     list_display = (
         'max_link_per_process_count',
+        'max_link_per_run_count',
+        'monitoring_iteration_timeout_seconds',
         'min_monitoring_timeout',
         'max_monitoring_count',
         'min_monitoring_count_before_report',
