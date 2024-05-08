@@ -5,7 +5,7 @@ from asyncio import Task
 from datetime import datetime, timedelta
 
 import httpx
-from django.db.models import QuerySet, Q
+from django.db.models import QuerySet
 from django.utils import timezone
 from playwright.async_api import async_playwright, Browser, Page, ElementHandle, BrowserContext
 from setuptools._vendor.more_itertools.more import chunked
@@ -71,18 +71,25 @@ class YtMonitoringProcess:
         self.date = date if date else datetime.now()
         self.links = links if links else MonitoringLink.objects.filter(
             is_active=True,
-            next_monitoring_date__gte=self.date,
+            next_monitoring_date__lte=self.date,
             source=MonitoringLink.Sources.YOUTUBE
         )
 
     @timer
     async def run(self):
-        if not await self.links.aexists():
-            return
+        if isinstance(self.links, QuerySet):
+            if not await self.links.aexists():
+                return
+            self.links = [link async for link in self.links[:self.params.max_link_per_process_count]]
+        else:
+            if len(self.links) == 0:
+                return
+            self.links = self.links[:self.params.max_link_per_process_count]
+
         async with httpx.AsyncClient() as client:
             profile_tasks: list[Task] = []
             music_tasks: list[Task] = []
-            async for link in self.links[:self.params.max_link_per_process_count]:
+            for link in self.links[:self.params.max_link_per_process_count]:
                 if link.source != MonitoringLink.Sources.YOUTUBE:
                     continue
 
@@ -111,13 +118,14 @@ class YtMonitoringProcess:
     async def get_yt_user_video_count(self, link: MonitoringLink, client: httpx.AsyncClient, parser: YtUserVideoCountParser) -> MonitoringResult | None:
         """Возвращает количество суммарное количество видео для одного ютуб профиля"""
         attempt: int = 0
-        resp: httpx.Response | None = None
         while attempt < self.REQUEST_USER_ATTEMPTS:
             try:
                 resp: httpx.Response = await client.get(link.url)
                 resp.raise_for_status()
             except Exception as e:
                 logger.error(f"An unexpected error occurred on attempt {attempt + 1} for URL {link.url}: {e}")
+                attempt += 1
+                continue
             html_content: str = resp.text
             video_count: int | None = await parser.get_video_count(html_content)
             logger.debug(f'{link.url} - {video_count}')
@@ -126,7 +134,7 @@ class YtMonitoringProcess:
                     monitoring_link=link,
                     video_count=video_count
                 )
-                link.next_monitoring_date = timezone.now() + timedelta(hours=self.params.min_monitoring_timeout)
+                link.next_monitoring_date = self.date + timedelta(hours=self.params.min_monitoring_timeout)
                 return result
             else:
                 logger.error(f"Failed to parse video count on attempt {attempt + 1} for URL {link.url}")
@@ -149,7 +157,7 @@ class YtMonitoringProcess:
             video_count=video_count
         )
         logger.debug(f'{link.url} - {video_count}')
-        link.next_monitoring_date = timezone.now() + timedelta(hours=self.params.min_monitoring_timeout)
+        link.next_monitoring_date = self.date + timedelta(hours=self.params.min_monitoring_timeout)
         return result
 
 
@@ -166,7 +174,7 @@ class TtMonitoringProcess:
         self.date = date if date else datetime.now()
         self.links: QuerySet[MonitoringLink] = links if links else MonitoringLink.objects.filter(
             is_active=True,
-            next_monitoring_date__gt=self.date,
+            next_monitoring_date__lte=self.date,
             source=MonitoringLink.Sources.TIKTOK
         )
 
@@ -174,8 +182,14 @@ class TtMonitoringProcess:
         """
         Запускает браузер, создает задание для каждой ссылки тиктока и сохраняет результаты мониторинга.
         """
-        if not await self.links.aexists():
-            return
+        if isinstance(self.links, QuerySet):
+            if not await self.links.aexists():
+                return
+            self.links = [link async for link in self.links[:self.params.max_link_per_process_count]]
+        else:
+            if len(self.links) == 0:
+                return
+            self.links = self.links[:self.params.max_link_per_process_count]
 
         async with async_playwright() as p:
             browser: Browser = await p.chromium.launch(headless=True)  # headless=True чтоб браузер не открывался
@@ -183,7 +197,7 @@ class TtMonitoringProcess:
             tasks: list[Task] = [
                 asyncio.create_task(
                     self._process_tt_link(context, link)
-                ) async for link in self.links[:self.params.max_link_per_process_count]
+                ) for link in self.links[:self.params.max_link_per_process_count]
             ]
             if tasks:
                 logger.info(f'Found {len(tasks)} tt links')
@@ -192,6 +206,7 @@ class TtMonitoringProcess:
                     await MonitoringResult.objects.abulk_create([*filter(lambda x: x is not None, results)])
                     await asyncio.sleep(self.params.monitoring_iteration_timeout_seconds)
             await browser.close()
+
         await MonitoringLink.objects.abulk_update(self.links, fields=["next_monitoring_date"])
 
     @timer
@@ -208,6 +223,8 @@ class TtMonitoringProcess:
         """
         page: Page = await context.new_page()
         element: ElementHandle | None = await self._get_page_content(link, page)
+        await page.close()
+
         if not element:
             logger.error('No element')
             return None
@@ -217,8 +234,7 @@ class TtMonitoringProcess:
             monitoring_link=link,
             video_count=video_count
         )
-        await page.close()
-        link.next_monitoring_date = timezone.now() + timedelta(hours=self.params.min_monitoring_timeout)
+        link.next_monitoring_date = self.date + timedelta(hours=self.params.min_monitoring_timeout)
         return result
 
     async def _get_page_content(self, link: MonitoringLink, page: Page) -> ElementHandle | None:

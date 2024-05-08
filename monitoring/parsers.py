@@ -97,7 +97,6 @@ class YtUserVideoCountParser(VideoCountParser):
 
     @classmethod
     def _parse_video_count_by_metadata(cls, html_content: str) -> int | None:
-
         match: re.Match[str] | None = re.search(r',"videosCountText":\{"runs":\[{"text":"(.*?)"},\{"text"', html_content)
         if not match:
             return None
