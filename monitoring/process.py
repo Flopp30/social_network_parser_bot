@@ -223,12 +223,13 @@ class TtMonitoringProcess:
         """
         page: Page = await context.new_page()
         element: ElementHandle | None = await self._get_page_content(link, page)
-        await page.close()
 
         if not element:
             logger.error('No element')
+            await page.close()
             return None
         video_count_text: str | None = await element.text_content()
+        await page.close()
         video_count: int = await self._get_video_count(video_count_text)
         result: MonitoringResult = MonitoringResult(
             monitoring_link=link,
