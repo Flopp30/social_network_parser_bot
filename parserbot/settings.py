@@ -18,6 +18,8 @@ TT_SIGNATURE_URL = env('TT_SIGNATURE_URL')
 TT_MUSIC_ERROR_ATTEMPTS = env('TT_MUSIC_ERROR_ATTEMPTS', 3)
 TT_USER_ERROR_ATTEMPTS = env('TT_USER_ERROR_ATTEMPTS', 3)
 
+TIKTOK_MS_TOKEN = env('TIKTOK_MS_TOKEN', None)
+
 # Django definition
 BASE_DIR = Path(__file__).resolve().parent.parent
 

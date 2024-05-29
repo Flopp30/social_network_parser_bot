@@ -36,7 +36,7 @@ def monitor_links(source: MonitoringLink.Sources | None = None, date: datetime |
         res = asyncio.run(processor.run())
     except Exception as e:
         logger.error(e)
-        res = "with error"
+        res = f'{type(e).__name__}: {e}'
     return res
 
 
@@ -76,7 +76,6 @@ def get_chat_ids(params: Parameter) -> list[int]:
     id_from_param.extend(User.objects.filter(send_alerts=True).values_list('chat_id', flat=True))
     # id_from_param.extend(map(int, filter(lambda x: x.is_digit(), params.chats_id_for_alert.split(','))))
     return id_from_param
-
 
 
 @shared_task(name='Analyze last two results')

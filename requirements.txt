@@ -13,3 +13,4 @@ pre-commit==3.7.0
 django-celery-beat==2.6.0
 psycopg2-binary==2.9.9
 flower==2.0.1
+TikTokApi==6.3.0

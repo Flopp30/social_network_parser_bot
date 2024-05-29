@@ -16,6 +16,9 @@ class ValidationScopes:
     # используется пока что только в тестах
     all_scopes: list[int] = [TIKTOK_USER, TIKTOK_MUSIC, YOUTUBE_USER, YOUTUBE_MUSIC, ALL]
 
+    # отдельные скоупы (не смешивать с теми, что выше, могут поломать валидацию)
+    TIKTOK_USER_ONE_VIDEO = 100
+
 
 class LinkValidator:
     """
@@ -82,6 +85,11 @@ class LinkValidator:
         return re.match(pattern, link) is not None
 
     @classmethod
+    def validate_tiktok_user_one_video_link(cls, link: str) -> bool:
+        pattern = r'^https:\/\/(?:www\.)?tiktok\.com\/@[^/?&]+\/video\/\d+$'
+        return re.match(pattern, link) is not None
+
+    @classmethod
     def _validation_scopes_func_mapper(cls, scope: int) -> list[Callable[..., bool]]:
         """В зависимости от переданного скоупа возвращает список функций для проверки ссылки"""
         mapper: dict[int, list[Callable[..., bool]]] = {
@@ -94,7 +102,8 @@ class LinkValidator:
                 cls.validate_tiktok_music_link,
                 cls.validate_youtube_user_link,
                 cls.validate_youtube_music_link,
-            ]
+            ],
+            ValidationScopes.TIKTOK_USER_ONE_VIDEO: [cls.validate_tiktok_user_one_video_link],
         }
         return mapper[scope]
 

@@ -34,6 +34,11 @@ class MessageContainer:
     parsing_success: str = 'Ссылка прошла валидацию, задача на парсинг поставлена.'
     parsing_by_sec_uid: str = 'Запущен парсинг по ID'
 
+    # ONE LINK STAT
+    one_link_stat_welcome: str = (
+        'Отправь ссылку на тт видео пользователя для получения статистики'
+    )
+
     # MONITORING
     monitoring_welcome: str = (
         'Раздел мониторинга\n'

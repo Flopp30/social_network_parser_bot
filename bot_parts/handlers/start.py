@@ -4,7 +4,7 @@ from telegram import Update, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 
 from bot_parts.helpers import check_bot_context, WelcomeRedirectType
-from bot_parts.keyboards import START_BOARD, MONITORING_BOARD, PARSING_BOARD
+from bot_parts.keyboards import START_BOARD, MONITORING_BOARD, PARSING_BOARD, ONE_LINK_BOARD
 from bot_parts.messages import MessageContainer
 
 
@@ -34,7 +34,7 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def welcome_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, **kwargs):
     """Ловит callback с START_BOARD"""
     default_state: str = 'AWAIT_WELCOME_CHOICE'
-    redirect_callback: Literal['monitoring', 'parsing'] | None = kwargs.get('redirect_callback')
+    redirect_callback: Literal['monitoring', 'parsing', 'one_link_stat'] | None = kwargs.get('redirect_callback')
 
     # либо редирект, либо callback с кнопки, иначе просто state возвращаем
     if not redirect_callback and not update.callback_query:
@@ -51,6 +51,12 @@ async def welcome_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, **
         message = MessageContainer.parsing_welcome
         keyboard = PARSING_BOARD
         state = 'AWAIT_LINK_TO_PARSE'
+
+    # one link stat button
+    elif redirect_callback == WelcomeRedirectType.ONE_LINK_PARSING:
+        message = MessageContainer.one_link_stat_welcome
+        keyboard = ONE_LINK_BOARD
+        state = 'AWAIT_LINK_TO_GET_STAT'
 
     # monitoring button
     else:

@@ -16,3 +16,4 @@ async def check_bot_context(update, context, force_update: bool = False):
 class WelcomeRedirectType:
     PARSING = 'parsing'
     MONITORING = 'monitoring'
+    ONE_LINK_PARSING = 'one_link_stat'

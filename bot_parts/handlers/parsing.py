@@ -5,8 +5,8 @@ from telegram.ext import ContextTypes
 
 from bot_parts.helpers import check_bot_context, WelcomeRedirectType
 from bot_parts.messages import MessageContainer
-from common.validators import LinkValidator
-from parserbot.tasks import parse_tiktok, parse_tiktok_by_sec_uid, parse_yt_music_link
+from common.validators import LinkValidator, ValidationScopes
+from parserbot.tasks import parse_tiktok, parse_tiktok_by_sec_uid, parse_yt_music_link, parse_tt_one_video
 from bot_parts.handlers.start import welcome_handler, start_handler
 
 
@@ -41,6 +41,31 @@ async def add_link_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await asyncio.sleep(1)
     # возвращает редирект на welcome_handler
     return await welcome_handler(update, context, redirect_callback=WelcomeRedirectType.PARSING)
+
+
+async def one_link_stat_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Получение статистики для одного видео по ссылке"""
+    await check_bot_context(update, context)
+
+    # редирект назад
+    if update.callback_query and update.callback_query.data == 'to_start_one_link_stat':
+        context.user_data['user'].state = 'START'
+        return await start_handler(update, context)
+
+    dirty_link: str = update.message.text
+    if decoded_link := LinkValidator.validate(dirty_link, scopes=ValidationScopes.TIKTOK_USER_ONE_VIDEO):
+        parse_tt_one_video.apply_async(args=[decoded_link, update.effective_chat.id])
+        message = MessageContainer.parsing_success
+    else:
+        message = MessageContainer.link_validation_error.format(link=dirty_link)
+
+    await context.bot.send_message(
+        update.effective_chat.id,
+        text=message
+    )
+    await asyncio.sleep(1)
+    # возвращает редирект на welcome_handler
+    return await welcome_handler(update, context, redirect_callback=WelcomeRedirectType.ONE_LINK_PARSING)
 
 
 async def command_parse_by_sec_uid(update: Update, context: ContextTypes.DEFAULT_TYPE):

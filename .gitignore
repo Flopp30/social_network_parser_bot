@@ -164,3 +164,4 @@ dev.env
 tiktok-signature*
 .htpasswd
 logs
+debug.py

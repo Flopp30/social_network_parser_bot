@@ -50,6 +50,7 @@ async def user_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         "AWAIT_WELCOME_CHOICE": start_handlers.welcome_handler,
         # парсинг
         "AWAIT_LINK_TO_PARSE": parsing_handlers.add_link_handler,
+        'AWAIT_LINK_TO_GET_STAT': parsing_handlers.one_link_stat_handler,
         # мониторинг
         'AWAIT_MONITORING_CHOICE': monitoring_handlers.monitoring_choice_handler,
         'MONITORING_AWAIT_LINK_FOR_ADDING': monitoring_handlers.add_link_handler,

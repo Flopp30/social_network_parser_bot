@@ -13,6 +13,7 @@ from typing import TypedDict
 import aiohttp
 import httpx
 import requests
+from TikTokApi import TikTokApi
 from django.conf import settings
 
 from common.utils import timer, HttpTelegramMessageSender
@@ -55,15 +56,24 @@ CONSTANT_USER_API_URL = """
 """.replace("\n", "").replace(" ", "")  # DON'T TOUCH THIS VARIABLE
 
 
-class CollectedItem(TypedDict):
-    link: str
-    upload: str
-    duration: str
+class SimpleCollectedItem(TypedDict):
+    country_code: str
     views: str
     likes: str
     comments: str
     resend: str
     saves: str
+
+
+class CollectedItem(TypedDict):
+    link: str
+    views: str
+    likes: str
+    comments: str
+    resend: str
+    saves: str
+    upload: str
+    duration: str
     description: str
 
 
@@ -75,12 +85,16 @@ class TikTokScrapper:
     # список настроек (из SCRAPPER_TIKTOK_SETTINGS)
     configs = SCRAPPER_TIKTOK_SETTINGS
 
+
     def __init__(self):
         self.uniq_ids = set()
         self.total = list()
         self.task_result = "SUCCESS"
         self.user_attempts = settings.TT_USER_ERROR_ATTEMPTS
         self.music_attempts = settings.TT_MUSIC_ERROR_ATTEMPTS
+
+        # TikTokApi
+        self.tiktok_api_ms_token = settings.TIKTOK_MS_TOKEN
 
     @timer
     async def run(self, url: str, chat_id: int = None):
@@ -340,3 +354,42 @@ class TikTokScrapper:
             return dt.strftime('%Y-%m-%d %H:%M:%S')
         except Exception:
             return '-'
+
+    async def get_one_video_stat(self, chat_id: int, url: str) -> str:
+        """Получает статистику по одной ссылке"""
+        try:
+            video_stat: SimpleCollectedItem = await self._get_video_stat(url)
+        except Exception as e:
+            logger.error(e)
+            return f"{type(e).__name__}: {e}"
+
+        text_message: str = (
+            f'Ссылка: {url}\n'
+            f'Страна загрузка: {video_stat["country_code"]}\n'
+            f'Просмотры: {video_stat["views"]}\n'
+            f'Лайки: {video_stat["likes"]}\n'
+            f'Комменты: {video_stat["comments"]}\n'
+            f'Репосты: {video_stat["resend"]}\n'
+            f'Сохранения: {video_stat["saves"]}\n'
+        )
+        return await HttpTelegramMessageSender.send_text_message(chat_id, text_message)
+
+    async def _get_video_stat(self, url: str) -> SimpleCollectedItem:
+        async with TikTokApi() as api:
+            await api.create_sessions(
+                ms_tokens=[self.tiktok_api_ms_token],
+                num_sessions=1,
+                sleep_after=3,
+                executable_path='/opt/google/chrome/google-chrome'
+            )
+            video = api.video(url=url)
+            video_info = await video.info()
+            video_stat = video_info.get('stats')
+        return SimpleCollectedItem(
+            country_code=video_info.get('locationCreated'),
+            views=video_stat.get('playCount', '-'),
+            likes=video_stat.get('diggCount', '-'),
+            comments=video_stat.get('commentCount', '-'),
+            resend=video_stat.get('shareCount', '-'),
+            saves=video_stat.get('collectCount', '-')
+        )

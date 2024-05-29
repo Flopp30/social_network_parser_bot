@@ -6,6 +6,17 @@ from common.validators import LinkValidator, ValidationScopes
 class LinkValidatorTest(TestCase):
     validator = LinkValidator
 
+    def test_tiktok_one_video_url(self):
+        """Ссылка на одно видео в аккаунте пользователя"""
+        link_res: list[tuple[str, str]] = [
+            ('https://www.tiktok.com/@makoto.gif/video/7369694849286540576', 'https://www.tiktok.com/@makoto.gif/video/7369694849286540576'),
+            ('https://www.tiktok.com/@ricc_1st/video/6930305666573716741?wqeqqwe', 'https://www.tiktok.com/@ricc_1st/video/6930305666573716741'),
+        ]
+
+        for link, res in link_res:
+            validated_link = self.validator.validate(link, scopes=ValidationScopes.TIKTOK_USER_ONE_VIDEO)
+            self.assertEqual(validated_link, res)
+
     def test_correct_tt_music_url(self):
         """Проверяем валидные ссылки на музыку в tiktok"""
         links_res: list[tuple[str, str]] = [
