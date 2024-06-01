@@ -1,14 +1,11 @@
 import json
-import requests
-import time
 import re
-import os
+import time
 
-from toolbox import saveFileJSON, openFileJSON, func_chunk, get_duration_in_seconds, youtube_convert_to_timestamp, \
-    getLink
-from xls_saver import saveToXls
-from pwee import dbSaveInstagram, getActiveTracks, getReelsByTrack, dbSaveParseStat
+import requests
+from pwee import dbSaveInstagram, dbSaveParseStat, getActiveTracks, getReelsByTrack
 from tg_reporter import sendSyncReport
+from toolbox import func_chunk, get_duration_in_seconds, getLink, saveFileJSON, youtube_convert_to_timestamp
 
 
 def post_request_browser(originalUrl, url_param, visitorData, continuation):
@@ -192,7 +189,7 @@ def yotube_get_shorts_data(url, rows=1000):
     # print(f"{continuation=}\n{visitorData=}")
     for n in range(pgs):
         if continuation is None:
-            print(f"BREAK! NO continuation")
+            print("BREAK! NO continuation")
             break
         print(f"PARSE page #{n + 2} rows : {len(res['items'])}")
         js_dat = post_request_browser(originalUrl, url_param, visitorData, continuation)
@@ -227,7 +224,7 @@ def startYoutubeParser(music_list=None):
             if ',' in total: total = total.replace(',', '')[:-1]
             try:
                 total_int = int(total)
-            except Exception as ex:
+            except Exception:
                 print(f"ERR Convert to Int: {total=}\t{res['header'].get('total')=}")
                 total = None
 
@@ -250,7 +247,7 @@ def startYoutubeParser(music_list=None):
                 response = requests.get(
                     f"https://yt.lemnoslife.com/noKey/videos?part=id,statistics,snippet,contentDetails&id={yt_url}")
                 dat = response.json()
-                saveFileJSON(f'yt_answer.json', dat)
+                saveFileJSON('yt_answer.json', dat)
             except Exception as ex:
                 print(ex)
                 continue
@@ -280,7 +277,7 @@ def startYoutubeParser(music_list=None):
                 # except Exception as ex:
                 # print(f"ERR: {music_id=}\n{ex}")
 
-            saveFileJSON(f"youtube_samplse_preSave.json", res)
+            saveFileJSON("youtube_samplse_preSave.json", res)
 
         new_col = dbSaveInstagram(res)
         print(f"\t{new_col=}")

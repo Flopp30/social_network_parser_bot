@@ -1,22 +1,20 @@
-from aiogram import Bot, types, Dispatcher, executor
-from aiogram.types import ContentType
 import asyncio
+import os
 import time
-from models import Channels, Rows
-from cfg import tg_token, tg_xaw, autorized, id_owner
-from keyb import uniKeyb
 
-from you_post import startYoutubeParser
-from tiktok_pw import startTikTokParser
+from aiogram import Bot, Dispatcher, executor, types
+from aiogram.types import ContentType
+from cfg import autorized, tg_token
 from insta_rapi import startInstaParser
+from keyb import uniKeyb
+from models import Channels, Rows
+from pwee import dbTextFinderCount, getStatReport
+from tiktok_pw import startTikTokParser
 
 #from keyb import *
 from toolbox import TM, digZero
-from xls_saver import saveToXls, createXLS
-
-from pwee import getStatReport, dbTextFinderCount
-
-import os
+from xls_saver import createXLS
+from you_post import startYoutubeParser
 
 #from youtube_lib import get_youtube_top_videos, getTextToTG, getShortsFromVideo
 #from you_post import yotube_get_shorts_data
@@ -40,7 +38,7 @@ URLS = {'tiktok': 'https://www.tiktok.com/music/{}',
 def getRootMess():
     total_col = Rows.select().count()
     tg_str = f"<b>Выбери площадку:</b>\nВ базе всего : <b>{digZero(total_col)}</b> строк"
-    buttons = [[["TIKTOK", "ROOT|tiktok"]], [["INSTAGRAM", "ROOT|instagram"]], [["YOUTUBE", "ROOT|youtube"]], ]
+    buttons = [[["TIKTOK", "ROOT|tiktok"]], [["INSTAGRAM", "ROOT|instagram"]], [["YOUTUBE", "ROOT|youtube"]] ]
     return tg_str, buttons
 
 def aboutTrackDesk(chan_id,find_track = None):
@@ -176,8 +174,8 @@ async def callback_query_all(call: types.CallbackQuery):
                 if next_pg > total_tracks // ON_PG: next_pg = 0
 
                 print(f"{total_tracks=}\n{prev_pg=}\n{next_pg=}")
-                buttons.append([[f"⬅️⬅️ [ {prev_pg} ]", f"ROOT|{tip}|{prev_pg}"], [f"➡️➡️[ {next_pg} ]", f"ROOT|{tip}|{next_pg}"], ])
-            buttons.append([["🔙 Главное", "ROOT"],["❌ Закрыть", "CANCEL"],])
+                buttons.append([[f"⬅️⬅️ [ {prev_pg} ]", f"ROOT|{tip}|{prev_pg}"], [f"➡️➡️[ {next_pg} ]", f"ROOT|{tip}|{next_pg}"] ])
+            buttons.append([["🔙 Главное", "ROOT"],["❌ Закрыть", "CANCEL"]])
             tg_str = f"<b>{tip.upper()}</b>\nВыбери трек:\nВ разделе всего : <b>{digZero(total_col)}</b> строк"
 
         await message.edit_text(text = tg_str, reply_markup=uniKeyb(buttons))
@@ -207,7 +205,7 @@ async def callback_query_all(call: types.CallbackQuery):
                     tg_str = startInstaParser([ch.music])
 
                 track = Channels.get_by_id(ch.music)
-                rows = Rows.select().where((Rows.chan == track.id))
+                rows = Rows.select().where(Rows.chan == track.id)
                 if rows.count():
                     await sendXLStoTG(message, track, rows)
                     tg_str += f"\n\n<b>{digZero(rows.count())} строк</b>"
@@ -227,7 +225,7 @@ async def callback_query_all(call: types.CallbackQuery):
         buttons = []
         TT = {'tiktok':'🎵',
               'instagram':'📷',
-              'youtube':'▶️'
+              'youtube':'▶️',
               }
         for t in tracks:
             nm = t.music if t.name is None else t.name
@@ -256,7 +254,7 @@ async def callback_query_all(call: types.CallbackQuery):
         tg_str = f"<b>💾 {track.tip.upper()}\nФайл по треку:</b> \n{URLS[track.tip].format(track.music)}"
         #print(track.__data__)
         #if track.tip in ['instagram', 'tiktok'] :
-        rows = Rows.select().where((Rows.chan==track.id))
+        rows = Rows.select().where(Rows.chan==track.id)
 
         if rows.count():
             await sendXLStoTG(message, track, rows)

@@ -1,11 +1,10 @@
-import aiohttp
 import asyncio
 import random
-import time
 
-from toolbox import saveFileJSON, openFileJSON, getLink
-from pwee import dbSaveInstagram, getActiveTracks, dbSaveParseStat, countReelsByTrack
+import aiohttp
+from pwee import countReelsByTrack, dbSaveInstagram, dbSaveParseStat, getActiveTracks
 from tg_reporter import sendSyncReport
+from toolbox import getLink, saveFileJSON
 
 msToken = "kWAM8FmtQBcUbCBd1Mu1JReYrNpKL1OWMkLuYCVSbv3rWDo-UhRD9ViOKKyJ9PntnrydvG2jFVvsukex6BYHOX-iFC0Fzg5CfcADftcBwAi9omXe1NtnhSQuP2S2J5zkBcdZfGGQPFvNsGH3"
 X_Bogus = "DFSzswSO7whANjtItOFHy09WcBnw"
@@ -23,7 +22,6 @@ cookies = {
     's_v_web_id': 'verify_lnsxfhms_yHqeSRTa_dagL_4MFC_9IBy_bbMu5iYn28iM',
     'cookie-consent': '{%22ga%22:false%2C%22af%22:false%2C%22fbp%22:false%2C%22lip%22:false%2C%22bing%22:false%2C%22ttads%22:false%2C%22reddit%22:false%2C%22criteo%22:false%2C%22version%22:%22v9%22}',
     'ttwid': '1%7CmOwlKOGX_hzGTArKlHzCj8_CD7iS4qDwcuLcR1xwWcU%7C1697636865%7Cc3403a248c3ad20b929a3fa43a5e36524fef1ae3e1470a08683046ed4d441501',
-    'msToken': 'm3JwC3Fdh4fKbW4stZEhTPu1USSj2eygB4w8P_K3thCumTi0H84L_PjukFJdCKb2_nhQj1DLA9ANCJR69deK7TgSxZT8JADpZ9BauNhp8tvHx-ykruvENpDIBahGQJEJ4Jk8RdQpUPo5rYueYQ==',
     'msToken': 'm3JwC3Fdh4fKbW4stZEhTPu1USSj2eygB4w8P_K3thCumTi0H84L_PjukFJdCKb2_nhQj1DLA9ANCJR69deK7TgSxZT8JADpZ9BauNhp8tvHx-ykruvENpDIBahGQJEJ4Jk8RdQpUPo5rYueYQ==',
 }
 
@@ -46,9 +44,9 @@ headers = {
 
 def parse_tiktok_data(url, cursor, dat):
     res = {
-        'header': {'source': 'tiktok', },
+        'header': {'source': 'tiktok' },
         'items': [],
-        'cursor': cursor
+        'cursor': cursor,
     }
 
     if dat.get('itemList') is None:

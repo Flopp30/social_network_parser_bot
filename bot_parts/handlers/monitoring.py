@@ -1,19 +1,22 @@
 import io
+from typing import TYPE_CHECKING
 
 import pandas as pd
-from django.db.models import QuerySet
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from bot_parts.handlers.start import welcome_handler, start_handler
+from bot_parts.handlers.start import start_handler, welcome_handler
 from bot_parts.helpers import WelcomeRedirectType
 from bot_parts.messages import MessageContainer
 from common.validators import LinkValidator, ValidationScopes
-from monitoring.utils import ensure_monitoring_link
 from monitoring.models import MonitoringLink
+from monitoring.utils import ensure_monitoring_link
+
+if TYPE_CHECKING:
+    from django.db.models import QuerySet
 
 
-async def _get_monitoring_csv() -> io.StringIO| None:
+async def _get_monitoring_csv() -> io.StringIO | None:
     """Возвращает список ссылок в мониторинге в виде стрима csv"""
     links = [{'id': link.id, 'url': link.url} async for link in MonitoringLink.objects.filter(is_active=True)]
     if not links:
@@ -51,7 +54,7 @@ async def monitoring_choice_handler(update: Update, context: ContextTypes.DEFAUL
         if file is None:
             await context.bot.send_message(
                 update.effective_chat.id,
-                text=MessageContainer.monitoring_link_list_empty
+                text=MessageContainer.monitoring_link_list_empty,
             )
             return await welcome_handler(update, context, redirect_callback=WelcomeRedirectType.MONITORING)
 
@@ -82,7 +85,7 @@ async def monitoring_choice_handler(update: Update, context: ContextTypes.DEFAUL
 
     await context.bot.send_message(
         update.effective_chat.id,
-        text=message
+        text=message,
     )
 
     return state
@@ -96,6 +99,9 @@ async def ensure_monitoring_links(urls: list[str]) -> str:
     activated_count = 0
 
     for url in cleaned_urls:
+        if url is None:
+            continue
+
         _, created_flag = await ensure_monitoring_link(url)
         if created_flag:
             created_count += 1
@@ -111,7 +117,7 @@ async def ensure_monitoring_links(urls: list[str]) -> str:
         success_count=len(cleaned_urls),
         created_count=created_count,
         activated_count=activated_count,
-        invalid_count=len(urls) - len(cleaned_urls)
+        invalid_count=len(urls) - len(cleaned_urls),
     )
 
 
@@ -119,7 +125,7 @@ async def add_link_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Добавляет ссылки в мониторинг"""
     dirty_urls: list[str]
     if '\n' in update.message.text:
-        dirty_urls: list[str] = update.message.text.split('\n')
+        dirty_urls = update.message.text.split('\n')
     else:
         dirty_urls = update.message.text.split(' ')
 
@@ -127,7 +133,7 @@ async def add_link_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await context.bot.send_message(
         update.effective_chat.id,
-        text=message
+        text=message,
     )
     return await welcome_handler(update, context, redirect_callback=WelcomeRedirectType.MONITORING)
 
@@ -135,7 +141,7 @@ async def add_link_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def remove_link_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Удаляет ссылку из мониторинга"""
 
-    link_params: dict[str: str | int] | None = None
+    link_params: dict[str, str | int] | None = None
     message: str = MessageContainer.link_validation_error
     try:
         # обрабатываем кейс по id
@@ -157,6 +163,6 @@ async def remove_link_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     await context.bot.send_message(
         update.effective_chat.id,
-        text=message
+        text=message,
     )
     return await welcome_handler(update, context, redirect_callback=WelcomeRedirectType.MONITORING)

@@ -7,8 +7,8 @@ from datetime import datetime, timedelta
 import httpx
 from django.db.models import QuerySet
 from django.utils import timezone
-from playwright.async_api import async_playwright, Browser, Page, ElementHandle, BrowserContext
-from setuptools._vendor.more_itertools.more import chunked
+from playwright.async_api import Browser, BrowserContext, ElementHandle, Page, async_playwright
+from more_itertools import chunked
 
 from common.utils import timer
 from monitoring.models import MonitoringLink, MonitoringResult, Parameter
@@ -28,7 +28,7 @@ class LinkMonitoringProcess:
         """
         self.params: Parameter = Parameter.objects.first()
         self.date: datetime = date or timezone.now()
-        self.source: str = source
+        self.source: str | None = source
 
     async def run(self):
         """
@@ -46,7 +46,6 @@ class LinkMonitoringProcess:
             logger.error(res)
             return res
         try:
-
             if not self.source or self.source == MonitoringLink.Sources.TIKTOK:
                 tt_process: TtMonitoringProcess = TtMonitoringProcess(self.params, self.date)
                 await tt_process.run()
@@ -54,42 +53,46 @@ class LinkMonitoringProcess:
                 yt_process: YtMonitoringProcess = YtMonitoringProcess(self.params, self.date)
                 await yt_process.run()
 
-            res = "Monitoring successful"
+            res = 'Monitoring successful'
         except Exception as e:
             logger.error(e)
-            res = f"Monitor links error: {e}"
+            res = f'{type(e).__name__}: {e}'
         return res
 
 
 class YtMonitoringProcess:
-    music_parser: YtMusicVideoCountParser = YtMusicVideoCountParser
-    profile_parser: YtUserVideoCountParser = YtUserVideoCountParser
+    music_parser: type[YtMusicVideoCountParser] = YtMusicVideoCountParser
+    profile_parser: type[YtUserVideoCountParser] = YtUserVideoCountParser
     REQUEST_USER_ATTEMPTS: int = 3
 
     def __init__(self, param: Parameter | None = None, date: datetime | None = None, links: QuerySet[MonitoringLink] | None = None):
         self.params: Parameter = param or Parameter.objects.first()
         self.date = date if date else datetime.now()
-        self.links = links if links else MonitoringLink.objects.filter(
-            is_active=True,
-            next_monitoring_date__lte=self.date,
-            source=MonitoringLink.Sources.YOUTUBE
+        self.links = (
+            links
+            if links
+            else MonitoringLink.objects.filter(
+                is_active=True,
+                next_monitoring_date__lte=self.date,
+                source=MonitoringLink.Sources.YOUTUBE,
+            )
         )
 
-    @timer
+    @timer(print_logger=False)
     async def run(self):
         if isinstance(self.links, QuerySet):
             if not await self.links.aexists():
                 return
-            self.links = [link async for link in self.links[:self.params.max_link_per_process_count]]
+            self.links = [link async for link in self.links[: self.params.max_link_per_process_count]]
         else:
             if len(self.links) == 0:
                 return
-            self.links = self.links[:self.params.max_link_per_process_count]
+            self.links = self.links[: self.params.max_link_per_process_count]
 
         async with httpx.AsyncClient() as client:
             profile_tasks: list[Task] = []
             music_tasks: list[Task] = []
-            for link in self.links[:self.params.max_link_per_process_count]:
+            for link in self.links[: self.params.max_link_per_process_count]:
                 if link.source != MonitoringLink.Sources.YOUTUBE:
                     continue
 
@@ -99,23 +102,23 @@ class YtMonitoringProcess:
                     profile_tasks.append(asyncio.create_task(self.get_yt_user_video_count(link, client, self.profile_parser)))
 
             if profile_tasks:
-                logger.debug('Found {} profile links'.format(len(profile_tasks)))
+                logger.debug(f'Found {len(profile_tasks)} profile links')
                 for chunk in chunked(profile_tasks, self.params.max_link_per_run_count):
-                    results: tuple = await asyncio.gather(*chunk)
-                    await MonitoringResult.objects.abulk_create([*filter(lambda x: x is not None, results)])
+                    profile_results: tuple = await asyncio.gather(*chunk)
+                    await MonitoringResult.objects.abulk_create([*filter(lambda x: x is not None, profile_results)])
                     await asyncio.sleep(self.params.monitoring_iteration_timeout_seconds)
 
             if music_tasks:
-                logger.debug('Found {} music links'.format(len(music_tasks)))
+                logger.debug(f'Found {len(music_tasks)} music links')
                 for chunk in chunked(music_tasks, self.params.max_link_per_run_count):
-                    results: tuple = await asyncio.gather(*chunk)
-                    await MonitoringResult.objects.abulk_create([*filter(lambda x: x is not None, results)])
+                    music_results: tuple = await asyncio.gather(*chunk)
+                    await MonitoringResult.objects.abulk_create([*filter(lambda x: x is not None, music_results)])
                     await asyncio.sleep(self.params.monitoring_iteration_timeout_seconds)
 
-        await MonitoringLink.objects.abulk_update(self.links, fields=["next_monitoring_date"])
+        await MonitoringLink.objects.abulk_update(self.links, fields=['next_monitoring_date'])
 
-    @timer
-    async def get_yt_user_video_count(self, link: MonitoringLink, client: httpx.AsyncClient, parser: YtUserVideoCountParser) -> MonitoringResult | None:
+    @timer(print_logger=False)
+    async def get_yt_user_video_count(self, link: MonitoringLink, client: httpx.AsyncClient, parser: type[YtUserVideoCountParser]) -> MonitoringResult | None:
         """Возвращает количество суммарное количество видео для одного ютуб профиля"""
         attempt: int = 0
         while attempt < self.REQUEST_USER_ATTEMPTS:
@@ -123,7 +126,7 @@ class YtMonitoringProcess:
                 resp: httpx.Response = await client.get(link.url)
                 resp.raise_for_status()
             except Exception as e:
-                logger.error(f"An unexpected error occurred on attempt {attempt + 1} for URL {link.url}: {e}")
+                logger.error(f'An unexpected error occurred on attempt {attempt + 1} for URL {link.url}: {e}')
                 attempt += 1
                 continue
             html_content: str = resp.text
@@ -132,17 +135,17 @@ class YtMonitoringProcess:
             if video_count:
                 result: MonitoringResult = MonitoringResult(
                     monitoring_link=link,
-                    video_count=video_count
+                    video_count=video_count,
                 )
                 link.next_monitoring_date = self.date + timedelta(hours=self.params.min_monitoring_timeout)
                 return result
             else:
-                logger.error(f"Failed to parse video count on attempt {attempt + 1} for URL {link.url}")
+                logger.error(f'Failed to parse video count on attempt {attempt + 1} for URL {link.url}')
             attempt += 1
         return None
 
-    @timer
-    async def get_yt_music_video_count(self, link: MonitoringLink, client: httpx.AsyncClient, parser: YtMusicVideoCountParser) -> MonitoringResult | None:
+    @timer(print_logger=False)
+    async def get_yt_music_video_count(self, link: MonitoringLink, client: httpx.AsyncClient, parser: type[YtMusicVideoCountParser]) -> MonitoringResult | None:
         """Возвращает суммарное количество коротких видео для одного ютуб звука"""
         try:
             resp: httpx.Response = await client.get(link.url)
@@ -154,7 +157,7 @@ class YtMonitoringProcess:
         video_count: int | None = await parser.get_video_count(html_content)
         result: MonitoringResult = MonitoringResult(
             monitoring_link=link,
-            video_count=video_count
+            video_count=video_count,
         )
         logger.debug(f'{link.url} - {video_count}')
         link.next_monitoring_date = self.date + timedelta(hours=self.params.min_monitoring_timeout)
@@ -172,10 +175,14 @@ class TtMonitoringProcess:
     def __init__(self, param: Parameter | None = None, date: datetime | None = None, links: QuerySet[MonitoringLink] | None = None):
         self.params: Parameter = param or Parameter.objects.first()
         self.date = date if date else datetime.now()
-        self.links: QuerySet[MonitoringLink] = links if links else MonitoringLink.objects.filter(
-            is_active=True,
-            next_monitoring_date__lte=self.date,
-            source=MonitoringLink.Sources.TIKTOK
+        self.links: QuerySet[MonitoringLink] = (
+            links
+            if links
+            else MonitoringLink.objects.filter(
+                is_active=True,
+                next_monitoring_date__lte=self.date,
+                source=MonitoringLink.Sources.TIKTOK,
+            )
         )
 
     async def run(self):
@@ -185,19 +192,20 @@ class TtMonitoringProcess:
         if isinstance(self.links, QuerySet):
             if not await self.links.aexists():
                 return
-            self.links = [link async for link in self.links[:self.params.max_link_per_process_count]]
+            self.links = [link async for link in self.links[: self.params.max_link_per_process_count]]
         else:
             if len(self.links) == 0:
                 return
-            self.links = self.links[:self.params.max_link_per_process_count]
+            self.links = self.links[: self.params.max_link_per_process_count]
 
         async with async_playwright() as p:
             browser: Browser = await p.chromium.launch(headless=True)  # headless=True чтоб браузер не открывался
             context: BrowserContext = await browser.new_context()
             tasks: list[Task] = [
                 asyncio.create_task(
-                    self._process_tt_link(context, link)
-                ) for link in self.links[:self.params.max_link_per_process_count]
+                    self._process_tt_link(context, link),
+                )
+                for link in self.links[: self.params.max_link_per_process_count]
             ]
             if tasks:
                 logger.info(f'Found {len(tasks)} tt links')
@@ -207,9 +215,9 @@ class TtMonitoringProcess:
                     await asyncio.sleep(self.params.monitoring_iteration_timeout_seconds)
             await browser.close()
 
-        await MonitoringLink.objects.abulk_update(self.links, fields=["next_monitoring_date"])
+        await MonitoringLink.objects.abulk_update(self.links, fields=['next_monitoring_date'])
 
-    @timer
+    @timer(print_logger=False)
     async def _process_tt_link(self, context: BrowserContext, link: MonitoringLink) -> MonitoringResult | None:
         """
         Обработчик ссылки: открывает новую страницу в браузере, получает контент со страницы, получает количество
@@ -233,7 +241,7 @@ class TtMonitoringProcess:
         video_count: int = await self._get_video_count(video_count_text)
         result: MonitoringResult = MonitoringResult(
             monitoring_link=link,
-            video_count=video_count
+            video_count=video_count,
         )
         link.next_monitoring_date = self.date + timedelta(hours=self.params.min_monitoring_timeout)
         return result
@@ -255,11 +263,9 @@ class TtMonitoringProcess:
         current_attempt: int = 0
         while current_attempt < self.TIMEOUT_ATTEMPTS and not element:
             try:
-                element = await page.wait_for_selector(
-                    "h2[data-e2e='music-video-count']",
-                    timeout=self.TIMEOUT_MILLISECONDS)
+                element = await page.wait_for_selector("h2[data-e2e='music-video-count']", timeout=self.TIMEOUT_MILLISECONDS)
             except (TimeoutError, asyncio.TimeoutError):
-                logger.error("Timeout wait_for_selector while waiting for {}".format(url))
+                logger.error(f'Timeout wait_for_selector while waiting for {url}')
                 current_attempt += 1
         return element
 
@@ -275,8 +281,11 @@ class TtMonitoringProcess:
 
         Преобразует строку с аббревиатурой тысяч ('K') и миллионов ('M') в числовое значение.
         """
-        match: re.Match | None = re.match(r"(\d+\.?\d*)(K|M)?", video_count_text)
+        match: re.Match | None = re.match(r'(\d+\.?\d*)(K|M)?', video_count_text)
+
+        if not match:
+            return 0
         number: float = float(match.group(1))
-        scale: str = match.group(2) or ""
+        scale: str | None = match.group(2) or ''
         number *= self.SCALE_MAP.get(scale, 1)
         return int(number)

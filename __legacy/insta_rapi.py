@@ -1,11 +1,10 @@
-import requests
 # import asyncio
 import time
 
-import re
-from toolbox import saveFileJSON, openFileJSON, date_str, getLink, TM
-from pwee import dbSaveInstagram, getActiveTracks, dbSaveParseStat
+import requests
+from pwee import dbSaveInstagram, dbSaveParseStat, getActiveTracks
 from tg_reporter import sendSyncReport
+from toolbox import TM, getLink, openFileJSON, saveFileJSON
 
 
 def get_insta_rapi(audio_id, endCursor):
@@ -16,7 +15,7 @@ def get_insta_rapi(audio_id, endCursor):
 
     headers = {
         "X-RapidAPI-Key": "5279821d40msh408620f208658b2p1342adjsnd8bcc63d351b",
-        "X-RapidAPI-Host": "instagram-data1.p.rapidapi.com"
+        "X-RapidAPI-Host": "instagram-data1.p.rapidapi.com",
     }
     response = requests.get(url, headers=headers, params=querystring)
     try:
@@ -30,7 +29,7 @@ def rapi_limit():
     url = "https://p.rapidapi.com/account"
     headers = {
         "X-RapidAPI-Key": "5279821d40msh408620f208658b2p1342adjsnd8bcc63d351b",
-        "X-RapidAPI-Host": "instagram-data1.p.rapidapi.com"
+        "X-RapidAPI-Host": "instagram-data1.p.rapidapi.com",
     }
     response = requests.get(url, headers=headers)
     return response.json()
@@ -44,10 +43,10 @@ def prepareData(dat):
         'total': dat['media_count'].get('clips_count', 0),
         'name': dat['metadata']['music_info']['music_asset_info'].get('title', 'NO TITLE'),
         'music_id': dat['metadata']['music_info']['music_asset_info']['audio_cluster_id'],
-        'duration': dat['metadata']['music_info']['music_asset_info']['duration_in_ms'] // 1000
+        'duration': dat['metadata']['music_info']['music_asset_info']['duration_in_ms'] // 1000,
     },
         'endCursor': dat.get('endCursor'),
-        'items': []
+        'items': [],
     }
 
     tt = {'code': 'link',
@@ -55,7 +54,7 @@ def prepareData(dat):
           'video_duration': 'duration',
           'play_count': 'views',
           'like_count': 'likes',
-          'comment_count': 'comments'
+          'comment_count': 'comments',
           }  # 'fb_like_count', 'fb_play_count'
 
     for d in dat['items']:
@@ -139,12 +138,12 @@ def startInstaParser(music_list=None):
             saveFileJSON('insta_parsed.json', dat)
 
             if 'took too long to respond' in dat.get('info', '') or dat.get('media_count') is None:
-                print(f"ERR:\ndat.get('media_count') is None\n")
+                print("ERR:\ndat.get('media_count') is None\n")
                 # break
                 continue
 
             elif dat['metadata'].get('music_info') is None:
-                print(f"ERR:\ndat['metadata'].get('music_info') is None\n")
+                print("ERR:\ndat['metadata'].get('music_info') is None\n")
                 # if dat.get('endCursor'): res = {'endCursor': dat.get('endCursor')}
                 continue
 
@@ -152,7 +151,7 @@ def startInstaParser(music_list=None):
                 EC[music_id] = dat.get('endCursor')
                 pg += 1
             else:
-                print(f'!! NO END CURSOR')
+                print('!! NO END CURSOR')
                 print(dat)
                 break
 
@@ -173,7 +172,7 @@ def main():
     all_insta_music = [
         548503650698790, 2163177623958819, 3364464810470386, 659100151177940, 659100151177940, 235518475541015,
         836131066758680,
-        3051341418441472, 909338913851322, 637699754749923, 2684804191672133
+        3051341418441472, 909338913851322, 637699754749923, 2684804191672133,
         # Это собираем, то что выше не трогаем
 
     ]
@@ -195,12 +194,12 @@ def main():
         saveFileJSON('insta_parsed.json', dat)
 
         if 'took too long to respond' in dat.get('info', '') or dat.get('media_count') is None:
-            print(f"ERR:\ndat.get('media_count') is None\n")
+            print("ERR:\ndat.get('media_count') is None\n")
             # break
             continue
 
         elif dat['metadata'].get('music_info') is None:
-            print(f"ERR:\ndat['metadata'].get('music_info') is None\n")
+            print("ERR:\ndat['metadata'].get('music_info') is None\n")
             # if dat.get('endCursor'): res = {'endCursor': dat.get('endCursor')}
             continue
 
@@ -208,7 +207,7 @@ def main():
             EC[music_id] = dat.get('endCursor')
             pg += 1
         else:
-            print(f'!! NO END CURSOR')
+            print('!! NO END CURSOR')
             print(dat)
             break
 

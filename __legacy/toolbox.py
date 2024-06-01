@@ -1,8 +1,6 @@
 import json
-from datetime import datetime, timezone, timedelta
-import time
 import re
-
+from datetime import datetime, timedelta, timezone
 
 # import phonenumbers
 
@@ -112,7 +110,7 @@ def openFileJSON(file_name, no=None):
     if no is None:
         no = {}
     try:
-        return json.loads(open(file_name, "r", encoding='utf-8').read())
+        return json.loads(open(file_name, encoding='utf-8').read())
     except Exception as e:
         print(f'Error open {file_name}\n{e}')
         return no
@@ -125,4 +123,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-   

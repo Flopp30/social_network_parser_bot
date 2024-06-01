@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Callable
 
 from django.conf import settings
 from django.core.management import BaseCommand
@@ -6,13 +7,15 @@ from telegram import Update
 from telegram.ext import (
     ApplicationBuilder,
     CallbackQueryHandler,
-    MessageHandler,
     CommandHandler,
+    ContextTypes,
+    MessageHandler,
+    PrefixHandler,
     filters,
-    ContextTypes, PrefixHandler,
 )
-import bot_parts.handlers.parsing as parsing_handlers
+
 import bot_parts.handlers.monitoring as monitoring_handlers
+import bot_parts.handlers.parsing as parsing_handlers
 import bot_parts.handlers.start as start_handlers
 from bot_parts.helpers import check_bot_context
 
@@ -43,13 +46,14 @@ async def user_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         user_state = context.user_data['user'].state or 'START'
 
     # мапа, возвращающая callback функции для вызова дальше.
-    states_function = {
+    states_function: dict[str, Callable] = {
         # start
         'START': start_handlers.start_handler,
         'NEW': start_handlers.start_handler,
-        "AWAIT_WELCOME_CHOICE": start_handlers.welcome_handler,
+        'AWAIT_WELCOME_CHOICE': start_handlers.welcome_handler,
         # парсинг
-        "AWAIT_LINK_TO_PARSE": parsing_handlers.add_link_handler,
+        'AWAIT_LINK_TO_PARSE': parsing_handlers.add_link_handler,
+        'AWAIT_LINK_TO_PARSING_WITH_GEO': parsing_handlers.parsing_with_geo,
         'AWAIT_LINK_TO_GET_STAT': parsing_handlers.one_link_stat_handler,
         # мониторинг
         'AWAIT_MONITORING_CHOICE': monitoring_handlers.monitoring_choice_handler,
@@ -67,6 +71,7 @@ async def user_input_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 def main():
     import tracemalloc
+
     tracemalloc.start()
     stream_handler = logging.StreamHandler()
     stream_handler.setLevel(settings.BOT_LOG_LEVEL)
@@ -85,14 +90,15 @@ def main():
         if settings.BOT_MODE == 'webhook':
             logger.warning('Bot started in WEBHOOK mode')
             application.run_webhook(
-                listen="0.0.0.0",
+                listen='0.0.0.0',
                 port=5000,
                 url_path=settings.TELEGRAM_TOKEN,
-                webhook_url=f"{settings.WEBHOOK_URL}{settings.TELEGRAM_TOKEN}"
+                webhook_url=f'{settings.WEBHOOK_URL}{settings.TELEGRAM_TOKEN}',
             )
         else:
             logger.warning('Bot started in POLLING mode')
             application.run_polling()
     except Exception:
         import traceback
+
         logger.warning(traceback.format_exc())

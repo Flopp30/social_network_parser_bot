@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 class TiktokSignatureABC(abc.ABC):
     """Базовый класс для получения x-tt-params при запросах к апи пользователей."""
+
     # url локально развернутого сервиса сигнатуры
     local_signature_url: str = settings.TT_SIGNATURE_URL
     # tt api point
@@ -33,13 +34,13 @@ class TiktokSignatureABC(abc.ABC):
 
     @classmethod
     async def get_tt_params(cls, sec_uid: str, cursor: int) -> str | None:
-        params: dict = deepcopy(cls.params) | {"cursor": cursor, "secUid": sec_uid}
+        params: dict = deepcopy(cls.params) | {'cursor': cursor, 'secUid': sec_uid}
         fake_user_url: str = cls.api_url + urlencode(params)
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                    cls.local_signature_url,
-                    headers={'Content-type': 'application/json'},
-                    data=fake_user_url
+                cls.local_signature_url,
+                headers={'Content-type': 'application/json'},
+                data=fake_user_url,
             ) as response:
                 try:
                     serialized_data: dict = await response.json()
@@ -51,23 +52,21 @@ class TiktokSignatureABC(abc.ABC):
 
 class UserVideoTiktokSignature(TiktokSignatureABC):
     """Получение x-tt-params по видео из аккаунта пользователя"""
+
     api_url: str = 'https://m.tiktok.com/api/post/item_list/?'
     params: dict = {
         'aid': '1988',
-        "count": 30,
-        "cookie_enabled": "true",
-        "screen_width": 0,
-        "screen_height": 0,
-        "browser_language": "",
-        "browser_platform": "",
-        "browser_name": "",
-        "browser_version": "",
-        "browser_online": "",
-        "timezone_name": "Europe/London",
+        'count': 30,
+        'cookie_enabled': 'true',
+        'screen_width': 0,
+        'screen_height': 0,
+        'browser_language': '',
+        'browser_platform': '',
+        'browser_name': '',
+        'browser_version': '',
+        'browser_online': '',
+        'timezone_name': 'Europe/London',
     }
     default_headers = {
-        'user-agent': (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36 Edg/107.0.1418.56"
-        ),
+        'user-agent': ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) ' 'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36 Edg/107.0.1418.56'),
     }

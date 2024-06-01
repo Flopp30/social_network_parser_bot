@@ -1,5 +1,6 @@
-from peewee import *
 import time
+
+from peewee import *
 
 db = SqliteDatabase('dbase.db')
 
@@ -62,7 +63,7 @@ class Rows(Model):
                 resend=int(resend) if resend else 0,
                 saves=int(saves) if saves else 0,
                 duration=int(duration) if duration else 0,
-                tmupd = int(time.time())
+                tmupd = int(time.time()),
                 )
         else:
             re_save = False
@@ -112,4 +113,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    

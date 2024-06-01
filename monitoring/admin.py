@@ -2,11 +2,7 @@ from django.contrib import admin
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 
-from monitoring.models import (
-    Parameter,
-    MonitoringLink,
-    MonitoringResult
-)
+from monitoring.models import MonitoringLink, MonitoringResult, Parameter
 
 
 @admin.register(Parameter)
@@ -36,18 +32,17 @@ class ParameterAdmin(admin.ModelAdmin):
 
 @admin.register(MonitoringLink)
 class MonitoringLinkAdmin(admin.ModelAdmin):
-    list_display = ('url', 'is_active', 'source', 'next_monitoring_date',)
-    search_fields = ('url', 'source',)
-    list_filter = ('is_active', 'source',)
+    list_display = ('url', 'is_active', 'source', 'next_monitoring_date')
+    search_fields = ('url', 'source')
+    list_filter = ('is_active', 'source')
 
 
 @admin.register(MonitoringResult)
 class MonitoringResultAdmin(admin.ModelAdmin):
-    list_display = ('url', 'video_count', 'created_at',)
+    list_display = ('url', 'video_count', 'created_at')
     search_fields = ('monitoring_link__url',)
     list_filter = ('created_at',)
 
+    @admin.display(description='Link url')
     def url(self, obj):
         return obj.monitoring_link.url
-
-    url.short_description = 'Link url'

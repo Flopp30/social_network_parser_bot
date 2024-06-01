@@ -5,15 +5,16 @@ SCRAPPER_TIKTOK_SETTINGS = []
 
 class TikTokScrapperConfig:
     """Объект настроек для парсера"""
+
     def __init__(
-            self,
-            ms_token: str,
-            x_bogus: str,
-            signature: str,
-            cookies: dict[str, str],
-            params: dict[str, str],
-            headers: dict[str, str],
-            is_available: bool = True,
+        self,
+        ms_token: str,
+        x_bogus: str,
+        signature: str,
+        cookies: dict[str, str],
+        params: dict[str, str],
+        headers: dict[str, str],
+        is_available: bool = True,
     ):
         self.msToken: str = ms_token
         self.X_Bogus: str = x_bogus

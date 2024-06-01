@@ -1,5 +1,5 @@
 import re
-from typing import Callable
+from collections.abc import Callable
 from urllib.parse import unquote, urlparse, urlunparse
 
 
@@ -22,7 +22,7 @@ class ValidationScopes:
 
 class LinkValidator:
     """
-        Returned decoded link or None if link is not valid
+    Returned decoded link or None if link is not valid
     """
 
     @classmethod
@@ -31,9 +31,9 @@ class LinkValidator:
         if isinstance(scopes, int):
             scopes = [scopes]
 
-        cleaned_url: str = cls._clean_link(url)
+        cleaned_url: str | None = cls._clean_link(url)
 
-        if not cls.validate_general_link(cleaned_url):
+        if not cls.validate_general_link(cleaned_url) or not cleaned_url:
             return None
 
         try:
@@ -45,6 +45,7 @@ class LinkValidator:
         # перебираем переданные scopes и вызываем соответствующие валидаторы
         for scope in scopes:
             res.extend(validate_func(decoded_url) for validate_func in cls._validation_scopes_func_mapper(scope))
+
         # если strict - все валидаторы должны вернуть True
         if strict:
             return decoded_url if all(res) else None
@@ -55,39 +56,39 @@ class LinkValidator:
     @classmethod
     def _clean_link(cls, url: str) -> str | None:
         parsed_url = urlparse(url)
-        clean_parsed_url = parsed_url._replace(query="")
+        clean_parsed_url = parsed_url._replace(query='')
         clean_url = str(urlunparse(clean_parsed_url))
         return clean_url
 
     @classmethod
-    def validate_general_link(cls, link: str) -> bool:
+    def validate_general_link(cls, link: str | None) -> bool:
         pattern = r'^https:\/\/(?:\w+\.)*\w+\.\w+(?:/\S*)?$'
-        return re.match(pattern, link) is not None
+        return bool(link and re.match(pattern, link))
 
     @classmethod
-    def validate_tiktok_user_link(cls, link: str) -> bool:
+    def validate_tiktok_user_link(cls, link: str | None) -> bool:
         pattern = r'^https:\/\/(?:www\.)?tiktok\.com\/@[^?&]+$'
-        return re.match(pattern, link) is not None
+        return bool(link and re.match(pattern, link))
 
     @classmethod
-    def validate_tiktok_music_link(cls, link: str) -> bool:
+    def validate_tiktok_music_link(cls, link: str | None) -> bool:
         pattern = r'^https:\/\/(?:www\.)?tiktok\.com\/music\/[\w-]+\-\d+$'
-        return re.match(pattern, link) is not None
+        return bool(link and re.match(pattern, link))
 
     @classmethod
-    def validate_youtube_music_link(cls, link: str) -> bool:
+    def validate_youtube_music_link(cls, link: str | None) -> bool:
         pattern = r'^https:\/\/(?:www\.)?youtube\.com\/source\/[\w-]+\/shorts.*$'
-        return re.match(pattern, link) is not None
+        return bool(link and re.match(pattern, link))
 
     @classmethod
-    def validate_youtube_user_link(cls, link: str) -> bool:
+    def validate_youtube_user_link(cls, link: str | None) -> bool:
         pattern = r'^https:\/\/(?:www\.)?youtube\.com\/@[\w-]+.*$'
-        return re.match(pattern, link) is not None
+        return bool(link and re.match(pattern, link))
 
     @classmethod
-    def validate_tiktok_user_one_video_link(cls, link: str) -> bool:
+    def validate_tiktok_user_one_video_link(cls, link: str | None) -> bool:
         pattern = r'^https:\/\/(?:www\.)?tiktok\.com\/@[^/?&]+\/video\/\d+$'
-        return re.match(pattern, link) is not None
+        return bool(link and re.match(pattern, link))
 
     @classmethod
     def _validation_scopes_func_mapper(cls, scope: int) -> list[Callable[..., bool]]:
@@ -106,6 +107,3 @@ class LinkValidator:
             ValidationScopes.TIKTOK_USER_ONE_VIDEO: [cls.validate_tiktok_user_one_video_link],
         }
         return mapper[scope]
-
-
-# есть тесты на LinkValidator (./manage.py test common)

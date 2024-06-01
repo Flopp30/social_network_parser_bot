@@ -16,7 +16,7 @@ class Parameter(models.Model):
     monitoring_iteration_timeout_seconds = models.PositiveIntegerField(
         default=60,
         verbose_name='Таймаут между итерациями',
-        help_text='Таймаут между итерациями мониторинга (в секундах)'
+        help_text='Таймаут между итерациями мониторинга (в секундах)',
     )
     min_monitoring_timeout = models.PositiveIntegerField(
         default=8,
@@ -25,7 +25,7 @@ class Parameter(models.Model):
     )
     max_monitoring_count = models.PositiveIntegerField(
         default=10,
-        verbose_name='Количество записываемых запусков мониторинга'
+        verbose_name='Количество записываемых запусков мониторинга',
     )
     min_monitoring_count_before_report = models.PositiveIntegerField(
         default=3,
@@ -34,7 +34,7 @@ class Parameter(models.Model):
     )
     alert_ratio = models.FloatField(
         verbose_name='Коэффициент оповещения',
-        default=1.5
+        default=1.5,
     )
     chats_id_for_alert = models.CharField(
         verbose_name='id чатов для оповещений',
@@ -49,7 +49,7 @@ class Parameter(models.Model):
         verbose_name_plural = 'Конфигурации'
 
     def __str__(self):
-        return f"Конфигурация параметров (ID {self.pk})"
+        return f'Конфигурация параметров (ID {self.pk})'
 
 
 class MonitoringLink(models.Model):
@@ -59,22 +59,22 @@ class MonitoringLink(models.Model):
 
     url = models.URLField(
         verbose_name='URL адрес',
-        unique=True
+        unique=True,
     )
 
     source = models.CharField(
         verbose_name='Источник',
         choices=Sources.choices,
-        max_length=20
+        max_length=20,
     )
 
     next_monitoring_date = models.DateTimeField(
-        verbose_name='Дата следующего мониторинга'
+        verbose_name='Дата следующего мониторинга',
     )
 
     is_active = models.BooleanField(
         verbose_name='Активна?',
-        default=True
+        default=True,
     )
 
     class Meta:
@@ -90,16 +90,16 @@ class MonitoringResult(models.Model):
         MonitoringLink,
         verbose_name='Ссылка',
         on_delete=models.CASCADE,
-        related_name='results'
+        related_name='results',
     )
     video_count = models.PositiveIntegerField(
         verbose_name='Количество видео',
         null=True,
-        blank=True
+        blank=True,
     )
     created_at = models.DateTimeField(
         verbose_name='Дата создания',
-        auto_now=True
+        auto_now=True,
     )
 
     class Meta:
@@ -107,4 +107,4 @@ class MonitoringResult(models.Model):
         verbose_name_plural = 'Результаты мониторинга'
 
     def __str__(self):
-        return f"{self.monitoring_link.url} - {self.video_count}"
+        return f'{self.monitoring_link.url} - {self.video_count}'

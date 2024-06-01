@@ -5,11 +5,9 @@ import django.db.models.deletion
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
@@ -30,10 +28,16 @@ class Migration(migrations.Migration):
             name='Parameter',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('max_link_per_process_count', models.PositiveIntegerField(default=1000, verbose_name='Максимальное количество ссылок для парсинга за один запуск')),
+                (
+                    'max_link_per_process_count',
+                    models.PositiveIntegerField(default=1000, verbose_name='Максимальное количество ссылок для парсинга за один запуск'),
+                ),
                 ('min_monitoring_timeout', models.PositiveIntegerField(default=24, verbose_name='Минимальный таймаут между запусками мониторинга (в часах)')),
                 ('max_monitoring_count', models.PositiveIntegerField(default=10, verbose_name='Количество записываемых запусков мониторинга')),
-                ('min_monitoring_count_before_report', models.PositiveIntegerField(default=3, verbose_name='Минимальное количество отслеживаний перед созданием отчёта')),
+                (
+                    'min_monitoring_count_before_report',
+                    models.PositiveIntegerField(default=3, verbose_name='Минимальное количество отслеживаний перед созданием отчёта'),
+                ),
                 ('alert_ratio', models.FloatField(default=1.5, verbose_name='Коэффициент оповещения')),
                 ('chats_id_for_alert', models.CharField(max_length=500, verbose_name='id чатов для оповещений (разделитель - запятая)')),
             ],
@@ -48,7 +52,12 @@ class Migration(migrations.Migration):
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('video_count', models.PositiveIntegerField(blank=True, null=True, verbose_name='Количество видео')),
                 ('created_at', models.DateTimeField(auto_now=True, verbose_name='Дата создания')),
-                ('monitoring_link', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='results', to='monitoring.monitoringlink', verbose_name='Ссылка')),
+                (
+                    'monitoring_link',
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, related_name='results', to='monitoring.monitoringlink', verbose_name='Ссылка'
+                    ),
+                ),
             ],
             options={
                 'verbose_name': 'Результат мониторинга',

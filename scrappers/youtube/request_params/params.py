@@ -1,11 +1,14 @@
-from typing import Dict
+from typing import TypeAlias, Any
 
-Headers = Cookies = Params = PostData = Dict[str, str]
+TypeHeaders: TypeAlias = dict[str, Any]
+TypeCookies: TypeAlias = dict[str, Any]
+TypeParams: TypeAlias = dict[str, Any]
+PostData: TypeAlias = dict[str, Any]
 
 
-def get_yt_post_params(original_url: str, query_params: str, visitor_data: str, continuation: str) -> tuple[Headers, Cookies, Params, PostData]:
+def get_yt_post_params(original_url: str, query_params: str, visitor_data: str, continuation: str) -> tuple[TypeHeaders, TypeCookies, TypeParams, PostData]:
     """Возвращает параметры для post запроса к api youtube"""
-    headers: Headers = {
+    headers: TypeHeaders = {
         'authority': 'www.youtube.com',
         'accept': '*/*',
         'accept-language': 'ru-RU,ru;q=0.9',
@@ -23,7 +26,7 @@ def get_yt_post_params(original_url: str, query_params: str, visitor_data: str, 
         'x-youtube-client-version': '2.20231003.02.02',
     }
 
-    cookies: Cookies = {
+    cookies: TypeCookies = {
         'GPS': '1',
         'YSC': 'H3gdXZkYDnQ',
         'VISITOR_INFO1_LIVE': 'p4jEpaI80G4',
@@ -31,7 +34,7 @@ def get_yt_post_params(original_url: str, query_params: str, visitor_data: str, 
         'PREF': 'f4=4000000&tz=Europe.Moscow',
     }
 
-    params: Params = {
+    params: TypeParams = {
         'key': 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8',
         'prettyPrint': 'false',
     }

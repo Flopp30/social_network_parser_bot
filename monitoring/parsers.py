@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 
 class VideoCountParser:
     """Базовый класс для парсеров количества видео со страницы"""
+
     YT_SCALE_MAP: dict = {
         'тыс.': 1_000,
         'млн.': 1_000_000,  # TODO потестить, не нашел сходу аккаунтов с таким количеством видео
@@ -39,6 +40,7 @@ class VideoCountParser:
 
 class YtMusicVideoCountParser(VideoCountParser):
     """Получает количество опубликованных видео со страницы звука"""
+
     @classmethod
     async def get_video_count(cls, html_content: str) -> int | None:
         """Возвращает количество видео по html коду страницы"""
@@ -65,7 +67,7 @@ class YtMusicVideoCountParser(VideoCountParser):
         """Получает количество видео из скрипта"""
         # NOTE в кейсах, где видео мало, сверху заголовка нет :(
         # поэтому вытаскиваем из contents (js код, где инициализация объектов происходит для отрисовки)
-        yt_data: re.Match[str]
+        yt_data: re.Match[str] | None
         if not (yt_data := re.search(r'var ytInitialData = (.*?);</script>', html_content, re.DOTALL)):
             return None
         json_data: dict = json.loads(yt_data.group(1))
@@ -74,10 +76,10 @@ class YtMusicVideoCountParser(VideoCountParser):
         tabs: list = json_data.get('contents', {}).get('twoColumnBrowseResultsRenderer', {}).get('tabs', [])
         for tab in tabs:
             # contents - это список видео для отрисовки
-            contents: list[dict | None] = tab.get('tabRenderer', {}).get('content', {}).get('richGridRenderer', {}).get('contents', [])
+            contents: list[dict] = tab.get('tabRenderer', {}).get('content', {}).get('richGridRenderer', {}).get('contents', [])
             for content in contents:
                 # accessibility_text - текст для незрячих. Наличие там ключевого слова 'short' или 'короткое' указывает на то, что в этой вкладке лежат шортсы
-                accessibility_text: str = content.get('richItemRenderer', {}).get('content', {}).get('shortsLockupViewModel', {}).get('accessibilityText')
+                accessibility_text: str = content.get('richItemRenderer', {}).get('content', {}).get('shortsLockupViewModel', {}).get('accessibilityText', '')
                 if 'короткое' in accessibility_text.lower() or 'short' in accessibility_text.lower():
                     return len(contents) + 1  # FIXME вот это чушь вообще, но по какой-то причине он ВСЕГДА возвращает (количество видео - 1)
         return None

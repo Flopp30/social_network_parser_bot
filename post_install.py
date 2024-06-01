@@ -2,7 +2,7 @@
 
 
 def modify_file(file_path, line_number, old_text, new_text):
-    with open(file_path, 'r') as file:
+    with open(file_path) as file:
         lines = file.readlines()
 
     if line_number - 1 < len(lines):
@@ -12,6 +12,6 @@ def modify_file(file_path, line_number, old_text, new_text):
         file.writelines(lines)
 
 
-if __name__ == "__main__":
-    target_file = "/usr/local/lib/python3.11/site-packages/TikTokApi/api/user.py"
+if __name__ == '__main__':
+    target_file = '/usr/local/lib/python3.11/site-packages/TikTokApi/api/user.py'
     modify_file(target_file, 119, '"count": count', '"count": 30')
