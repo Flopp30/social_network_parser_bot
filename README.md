@@ -35,6 +35,10 @@
    CELERY_BROKER=redis://redis:6379/0
    CELERY_BACKEND=redis://redis:6379/0
    ```
+   NOTE: в идеале нужно ```TIKTOK_MS_TOKEN``` добавить. Достается из куков при посещении тиктока. <br>
+   Открываешь куки, ждешь полной загрузки страницы (токен изменится несколько раз).<br>
+   Лучше добавить сразу несколько (разделитель - ;). ```TIKTOK_MS_TOKEN=msToken1;msToken2;msToken3```.<br>
+   Нужны для работы библиотеки TikTokApi
 7. Получаешь токен нового бота у <a href="https://t.me/BotFather">bot father</a> и закидываешь его в .env и dev.env ```BOT_TOKEN```
 8. Для локально разработки запускаешь только redis, celery и tiktok-signature
    ```bash 
@@ -48,15 +52,24 @@
    ```bash
    ./manage.py createsuperuser 
    ```
-11. Запускаешь бота
+11. Поправить исходный код библиотеки TikTokApi
+   ```bash
+   python3 post_install.py
+   ```
+12. Запускаешь бота
    ```bash
    ./manage.py run_bot
    ```
-12. Запускаешь админку
+13. Запускаешь админку
    ```bash
    ./manage.py runserver
    ```
 
+# линтеры
+1. Установить хуки на коммит:
+   ```pre-commit install```
+2. Запустить вне коммита: 
+   ```pre-commit run -a```
 
 # NOTES
 - Пайплайны (.github/workflow) на коммит в мастер, так что поаккуратнее, защиты никакой нет.
