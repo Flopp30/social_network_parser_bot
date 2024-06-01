@@ -8,6 +8,7 @@ from typing import Any
 import httpx
 import pandas as pd
 import requests
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
@@ -143,12 +144,10 @@ class Finder:
 
 
 class HttpTelegramMessageSender:
-    # doc_url = settings.TELEGRAM_DOC_URL
-    # send_message_url = settings.TELEGRAM_MESSAGE_URL
-    #
-
-    doc_url = 'https://api.telegram.org/bot6288404871:AAHS6C29JiFkcrMspNkLxWB72_PLNO3K0V4/sendDocument'
-    send_message_url = 'https://api.telegram.org/bot6288404871:AAHS6C29JiFkcrMspNkLxWB72_PLNO3K0V4/sendMessage'
+    doc_url = settings.TELEGRAM_DOC_URL
+    send_message_url = settings.TELEGRAM_MESSAGE_URL
+    # doc_url = 'https://api.telegram.org/bot6288404871:AAHS6C29JiFkcrMspNkLxWB72_PLNO3K0V4/sendDocument'
+    # send_message_url = 'https://api.telegram.org/bot6288404871:AAHS6C29JiFkcrMspNkLxWB72_PLNO3K0V4/sendMessage'
 
     @classmethod
     async def send_csv_doc(cls, chat_id: int, collection: dict | list | pd.DataFrame, caption: str, file_name: str = 'report.csv') -> str:
