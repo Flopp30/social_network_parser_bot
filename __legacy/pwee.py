@@ -1,14 +1,13 @@
-from models import Channels, Rows, Parse
-from peewee import fn
 import time
 
+from models import Channels, Parse, Rows
+from peewee import fn
 from tg_reporter import sendSyncReport
-from toolbox import getLink
 
 
 def dbTextFinderCount(text, counter=False):
     text = text.lower()
-    query = Channels.select().where((fn.LOWER(Channels.name).contains(text)) & (Channels.active == True))
+    query = Channels.select().where((fn.LOWER(Channels.name).contains(text)) & (Channels.active is True))
 
     if counter:
         return query.count()
@@ -17,12 +16,12 @@ def dbTextFinderCount(text, counter=False):
 
 
 def getInstaActiveChannels():
-    tracks = Channels.select().where((Channels.tip == 'instagram') & (Channels.active == True))
+    tracks = Channels.select().where((Channels.tip == 'instagram') & (Channels.active is True))
     return [_.music for _ in tracks]
 
 
 def getActiveTracks(tip, music_list=None):
-    tracks = Channels.select().where((Channels.tip == tip) & (Channels.active == True))
+    tracks = Channels.select().where((Channels.tip == tip) & (Channels.active is True))
 
     if music_list:
         return {_.music: _.name for _ in tracks if _.music in music_list}
@@ -140,4 +139,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-   

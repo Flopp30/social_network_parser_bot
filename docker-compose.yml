@@ -1,5 +1,19 @@
 version: '3.7'
 
+x-common:
+  &celery_default-settings
+  build:
+    context: .
+    dockerfile: Dockerfile_celery
+  env_file:
+    - .env
+  volumes:
+    - .:/app
+  depends_on:
+    - signature
+    - redis
+  restart: always
+
 services:
   signature:
     build:
@@ -22,17 +36,16 @@ services:
       - signature
 
   celery:
-    build:
-      context: .
-      dockerfile: Dockerfile_celery
-    env_file:
-      - .env
-    volumes:
-      - .:/app
-    depends_on:
-      - signature
-      - redis
-    restart: always
+    <<: *celery_default-settings
+    command: celery -A parserbot worker --beat --scheduler django --loglevel=info --concurrency=3 --prefetch-multiplier=3 -Q default
+
+  celery_long_tasks1:
+    <<: *celery_default-settings
+    command: celery -A parserbot worker --beat --scheduler django --loglevel=info --concurrency=1 --prefetch-multiplier=1 -Q long_tasks
+
+  celery_long_tasks2:
+    <<: *celery_default-settings
+    command: celery -A parserbot worker --beat --scheduler django --loglevel=info --concurrency=1 --prefetch-multiplier=1 -Q long_tasks
 
   flower:
     image: mher/flower

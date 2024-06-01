@@ -19,7 +19,7 @@ logger = logging.getLogger('youtube_scrapper')
 class HtmlParseResult(TypedDict):
     json_data: dict
     query_params: str
-    continuation_token: str
+    continuation_token: str | None
     visitor_id: str
     video_ids: list[str]
 
@@ -48,7 +48,7 @@ class YoutubeScrapper:
     # диапазон слипа в пагинации
     PAGINATION_SLEEP_RANGE: tuple[float, float] = (1.0, 3.0)
 
-    @timer
+    @timer(print_logger=False)
     async def run(self, link: str, chat_id: int):
         """Запуск парсера"""
         # валидируем ссылку
@@ -71,7 +71,7 @@ class YoutubeScrapper:
             for chunk in chunked(video_ids, self.info_api_chunk_size):
                 for video_id in chunk:
                     tasks.append(
-                        asyncio.create_task(self.ger_videos_statistic_by_id(video_id, client))
+                        asyncio.create_task(self.ger_videos_statistic_by_id(video_id, client)),
                     )
 
                 collected_items = await asyncio.gather(*tasks)
@@ -85,7 +85,7 @@ class YoutubeScrapper:
             chat_id=chat_id,
             collection=normalized_items,
             caption='Отчет YT по ссылке: ' + link,
-            file_name='yt_report.csv'
+            file_name='yt_report.csv',
         )
 
     async def _get_linked_video_ids(self, link: str, client: httpx.AsyncClient) -> set[str]:
@@ -114,7 +114,7 @@ class YoutubeScrapper:
         prev_parsed_count: int = len(found_ids)
 
         # пагинация
-        continuation_token: str = parse_result['continuation_token']
+        continuation_token: str | None = parse_result['continuation_token']
         attempt_counter: int = 3
 
         while continuation_token is not None and attempt_counter > 0:
@@ -126,7 +126,7 @@ class YoutubeScrapper:
                 parse_result['query_params'],
                 parse_result['visitor_id'],
                 continuation_token,
-                client
+                client,
             )
             if not json_data:
                 logger.info('Empty response')
@@ -152,13 +152,17 @@ class YoutubeScrapper:
     def _parse_html(self, finder: Finder, html_content: str) -> HtmlParseResult | None:
         """Парсит информацию со страницы ютуба"""
         # ytInitialData (без неё не имеет смысла продолжать, т.к. именно отсюда получаем токен пагинации)
-        yt_data: re.Match[str] = re.search(r'var ytInitialData = (.*?);</script>', html_content, re.DOTALL)
+        yt_data: re.Match[str] | None = re.search(r'var ytInitialData = (.*?);</script>', html_content, re.DOTALL)
         if not yt_data:
             return None
         json_data: dict = json.loads(yt_data.group(1))
 
         # тут лежит идентификатор уникальности запроса
-        yt_command: dict | list = json.loads(re.search(r'window\[\'ytCommand\'\] = ({.*?});', html_content).group(1))
+        match: re.Match | None = re.search(r'window\[\'ytCommand\'\] = ({.*?});', html_content)
+        if match is None:
+            return None
+        yt_command: dict | list = json.loads(match.group(1))
+
         query_params = finder.find_by_key_path(yt_command, self.QUERY_PARAM_PATH)
         if not isinstance(query_params, str):
             query_params = finder.find(query_params, 'params')
@@ -175,8 +179,8 @@ class YoutubeScrapper:
         assert visitor_id is not None and isinstance(visitor_id, str)
 
         # token пагинации
-        continuation_token: list[str] = finder.find(json_data, 'token')
-        continuation_token: str = continuation_token[0] if continuation_token else None
+        continuation_tokens: list[str] = finder.find(json_data, 'token')
+        continuation_token: str | None = continuation_tokens[0] if continuation_tokens else None
 
         # ищем id видео
         video_ids: list[str] = finder.find(json_data, 'videoId')
@@ -185,7 +189,7 @@ class YoutubeScrapper:
             query_params=query_params,
             visitor_id=visitor_id,
             continuation_token=continuation_token,
-            video_ids=video_ids
+            video_ids=video_ids,
         )
 
     async def ger_videos_statistic_by_id(self, video_id: str, client: httpx.AsyncClient) -> list[CollectedItem]:
@@ -208,12 +212,12 @@ class YoutubeScrapper:
     def _get_collected_item(self, item: dict) -> CollectedItem:
         statistic: dict = item.get('statistics', {})
         return CollectedItem(
-            link=self.yt_video_base_link + item.get('id'),
-            views=statistic.get('viewCount'),
-            likes=statistic.get('likeCount'),
-            comments=statistic.get('commentCount'),
-            favourites=statistic.get('favoriteCount'),
-            id=item.get('id'),
+            link=self.yt_video_base_link + item.get('id', 'ERROR'),
+            views=statistic.get('viewCount', 0),
+            likes=statistic.get('likeCount', 0),
+            comments=statistic.get('commentCount', 0),
+            favourites=statistic.get('favoriteCount', 0),
+            id=item.get('id', 'ERROR'),
         )
 
     async def pagination_post_request(self, base_url: str, query_params: str, visitor_data: str, continuation: str, client: httpx.AsyncClient) -> dict | None:

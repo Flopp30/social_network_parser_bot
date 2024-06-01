@@ -17,6 +17,14 @@ class LinkValidatorTest(TestCase):
             validated_link = self.validator.validate(link, scopes=ValidationScopes.TIKTOK_USER_ONE_VIDEO)
             self.assertEqual(validated_link, res)
 
+    def test_tt_user_or_music(self):
+        links = [
+            'https://www.tiktok.com/music/son-original-7264928629472856864',
+        ]
+        for link in links:
+            validated_link = self.validator.validate(link, scopes=[ValidationScopes.TIKTOK_USER, ValidationScopes.TIKTOK_MUSIC])
+            print(validated_link)
+
     def test_correct_tt_music_url(self):
         """Проверяем валидные ссылки на музыку в tiktok"""
         links_res: list[tuple[str, str]] = [

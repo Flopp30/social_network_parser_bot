@@ -1,10 +1,10 @@
+import asyncio
+import json
+import platform
+import random
+
 from playwright.async_api import async_playwright
 from pw_phones import phones_arr
-import random
-import json
-import asyncio
-import platform
-
 
 os_name = platform.system()
 HEADLESS = False if os_name=='Windows' else True
@@ -55,7 +55,7 @@ async def getPWLinks(music_id, cursors):
 
 def parse_tiktok_data(music_id, dat):
     res = {
-        'header': {'source': 'tiktok',},
+        'header': {'source': 'tiktok'},
         'items' : [],
         #'cursor': cursor
     }
@@ -96,7 +96,7 @@ async def request_pw_arr(pw, urls, i):
     print(f"{i}. {rnd_phone}")
     browser = await pw.chromium.launch(
                 #proxy={"server": proxy_server,'username': proxy_name,'password': proxy_pass},
-                                       headless=HEADLESS
+                                       headless=HEADLESS,
                                        )
     context = await browser.new_context(**phone)
     page = await context.new_page()

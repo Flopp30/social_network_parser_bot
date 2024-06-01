@@ -1,10 +1,10 @@
 from typing import Literal
 
-from telegram import Update, InlineKeyboardMarkup
+from telegram import InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
 
-from bot_parts.helpers import check_bot_context, WelcomeRedirectType
-from bot_parts.keyboards import START_BOARD, MONITORING_BOARD, PARSING_BOARD, ONE_LINK_BOARD
+from bot_parts.helpers import WelcomeRedirectType, check_bot_context
+from bot_parts.keyboards import MONITORING_BOARD, ONE_LINK_BOARD, PARSING_BOARD, START_BOARD, GEO_PARSING_BOARD
 from bot_parts.messages import MessageContainer
 
 
@@ -17,11 +17,11 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if context.user_data['user'].is_approved:
         message = MessageContainer.start_approved
         keyboard = START_BOARD
-        state = "AWAIT_WELCOME_CHOICE"
+        state = 'AWAIT_WELCOME_CHOICE'
     else:
         message = MessageContainer.start_not_approved
         keyboard = None
-        state = "START"
+        state = 'START'
 
     await context.bot.send_message(
         chat_id=update.effective_chat.id,
@@ -34,9 +34,9 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def welcome_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, **kwargs):
     """Ловит callback с START_BOARD"""
     default_state: str = 'AWAIT_WELCOME_CHOICE'
-    redirect_callback: Literal['monitoring', 'parsing', 'one_link_stat'] | None = kwargs.get('redirect_callback')
+    redirect_callback: Literal['monitoring', 'parsing', 'geo_parsing', 'one_link_stat'] | None = kwargs.get('redirect_callback')
 
-    # либо редирект, либо callback с кнопки, иначе просто state возвращаем
+    # либо редирект, либо callback с кнопки
     if not redirect_callback and not update.callback_query:
         return default_state
 
@@ -51,6 +51,12 @@ async def welcome_handler(update: Update, context: ContextTypes.DEFAULT_TYPE, **
         message = MessageContainer.parsing_welcome
         keyboard = PARSING_BOARD
         state = 'AWAIT_LINK_TO_PARSE'
+
+    # geo_parsing
+    elif redirect_callback == WelcomeRedirectType.GEO_PARSING:
+        message = MessageContainer.geo_parsing_welcome
+        keyboard = GEO_PARSING_BOARD
+        state = 'AWAIT_LINK_TO_PARSING_WITH_GEO'
 
     # one link stat button
     elif redirect_callback == WelcomeRedirectType.ONE_LINK_PARSING:

@@ -1,6 +1,6 @@
-from aiogram import Bot, types, Dispatcher, executor
-from cfg import tg_token, tg_xaw, REP_CHAN
 import requests
+from aiogram import Bot, types
+from cfg import REP_CHAN, tg_token
 
 bot = Bot(token=tg_token,
           parse_mode=types.ParseMode.HTML,
@@ -52,4 +52,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-   

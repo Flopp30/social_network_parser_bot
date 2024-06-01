@@ -4,7 +4,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ('monitoring', '0002_alter_parameter_chats_id_for_alert'),
     ]
@@ -13,12 +12,16 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='parameter',
             name='max_link_per_run_count',
-            field=models.PositiveIntegerField(default=10, help_text='Максимальное количество ссылок для парсинга за одну итерацию', verbose_name='Количество ссылок для парсинга'),
+            field=models.PositiveIntegerField(
+                default=10, help_text='Максимальное количество ссылок для парсинга за одну итерацию', verbose_name='Количество ссылок для парсинга'
+            ),
         ),
         migrations.AddField(
             model_name='parameter',
             name='monitoring_iteration_timeout_seconds',
-            field=models.PositiveIntegerField(default=60, help_text='Таймаут между итерациями мониторинга (в секундах)', verbose_name='Таймаут между итерациями'),
+            field=models.PositiveIntegerField(
+                default=60, help_text='Таймаут между итерациями мониторинга (в секундах)', verbose_name='Таймаут между итерациями'
+            ),
         ),
         migrations.AlterField(
             model_name='parameter',
@@ -28,16 +31,24 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='parameter',
             name='max_link_per_process_count',
-            field=models.PositiveIntegerField(default=1000, help_text='Максимальное количество ссылок для парсинга за один запуск', verbose_name='Количество ссылок для парсинга'),
+            field=models.PositiveIntegerField(
+                default=1000, help_text='Максимальное количество ссылок для парсинга за один запуск', verbose_name='Количество ссылок для парсинга'
+            ),
         ),
         migrations.AlterField(
             model_name='parameter',
             name='min_monitoring_count_before_report',
-            field=models.PositiveIntegerField(default=3, help_text='Минимальное количество отслеживаний перед созданием отчёта', verbose_name='Минимальное количество отслеживаний'),
+            field=models.PositiveIntegerField(
+                default=3, help_text='Минимальное количество отслеживаний перед созданием отчёта', verbose_name='Минимальное количество отслеживаний'
+            ),
         ),
         migrations.AlterField(
             model_name='parameter',
             name='min_monitoring_timeout',
-            field=models.PositiveIntegerField(default=8, help_text='Минимальный таймаут между запусками мониторинга (в часах) для одной ссылки', verbose_name='Таймаут между запусками мониторинга'),
+            field=models.PositiveIntegerField(
+                default=8,
+                help_text='Минимальный таймаут между запусками мониторинга (в часах) для одной ссылки',
+                verbose_name='Таймаут между запусками мониторинга',
+            ),
         ),
     ]

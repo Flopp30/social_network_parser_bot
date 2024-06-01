@@ -4,17 +4,19 @@ from django.db import models
 class User(models.Model):
     chat_id = models.BigIntegerField(
         verbose_name='Chat id',
-        blank=False, null=False
+        blank=False,
+        null=False,
     )
     username = models.CharField(
         verbose_name='Имя пользователя',
         max_length=100,
-        blank=True, null=True,
+        blank=True,
+        null=True,
     )
     state = models.CharField(
         verbose_name='Статус в переписке в боте',
         max_length=50,
-        default="NEW",
+        default='NEW',
     )
     last_visit_time = models.DateTimeField(
         verbose_name='Дата и время последнего посещения',
@@ -30,7 +32,7 @@ class User(models.Model):
     )
     send_alerts = models.BooleanField(
         verbose_name='Слать оповещения?',
-        default=False
+        default=False,
     )
 
     class Meta:
@@ -38,4 +40,4 @@ class User(models.Model):
         verbose_name_plural = 'Пользователи'
 
     def __str__(self) -> str:
-        return f"{self.username if self.username else self.chat_id}"
+        return f'{self.username if self.username else self.chat_id}'

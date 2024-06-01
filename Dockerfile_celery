@@ -11,6 +11,3 @@ RUN apt-get -y install `pwd`/google-chome.deb
 
 # patch TikTokApi lib
 RUN python post_install.py
-
-# run celery
-CMD celery -A parserbot worker --beat --scheduler django --loglevel=info --concurrency=3 --prefetch-multiplier=3

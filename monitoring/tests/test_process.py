@@ -1,12 +1,13 @@
 import datetime
 import os
+from collections.abc import Callable
 from functools import wraps
-from typing import Callable
-from unittest.mock import patch, AsyncMock
+from unittest.mock import AsyncMock, patch
 
 from django.test import TestCase
 from django.utils import timezone
-from monitoring.models import Parameter, MonitoringLink, MonitoringResult
+
+from monitoring.models import MonitoringLink, MonitoringResult, Parameter
 from monitoring.process import TtMonitoringProcess, YtMonitoringProcess
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
@@ -33,6 +34,7 @@ def patch_httpx(content_callback_func: Callable):
     """Декоратор для мока httpx
     принимает callback функции для получения содержимого страницы
     """
+
     # NOTE
     # - асинхронный контекстный менеджер возвращает AsyncClient
     # - AsyncClient на метод get возвращает response
@@ -51,7 +53,9 @@ def patch_httpx(content_callback_func: Callable):
                 mocked_httpx.return_value.__aenter__.return_value = client
                 res = await func(*args, mocked_httpx, **kwargs)
             return res
+
         return wrapper
+
     return decorator
 
 
@@ -68,7 +72,6 @@ def patch_playwright(video_count: str = '10'):
     def decorator(func: Callable):
         @wraps(func)
         async def wrapper(*args, **kwargs):
-
             with patch('monitoring.process.async_playwright') as mocked_playwright:
                 # Создаем отдельные моки для каждого метода
                 element = AsyncMock()
@@ -93,7 +96,9 @@ def patch_playwright(video_count: str = '10'):
                 res = await func(*args, mocked_playwright, **kwargs)
 
             return res
+
         return wrapper
+
     return decorator
 
 
@@ -133,7 +138,7 @@ class TtMonitoringProcessTest(TestCase):
     @patch_playwright('20')
     async def test_main(self, mocked_playwright: AsyncMock):
         # проверяем, что сохраненных результатов нет
-        self.assertEquals(await MonitoringResult.objects.acount(), 0)
+        self.assertEqual(await MonitoringResult.objects.acount(), 0)
 
         # запускаем процессинг
         await self.PROCESS(param=self.param, date=self.today).run()
@@ -162,7 +167,7 @@ class TtMonitoringProcessTest(TestCase):
         # проверяем, что дата сл мониторинга для yt ссылок не изменилась
         await self.yt_user_link.arefresh_from_db()
         await self.yt_music_link.arefresh_from_db()
-        self.assertEquals(
+        self.assertEqual(
             self.yt_user_link.next_monitoring_date,
             self.yt_music_link.next_monitoring_date,
             self.today,
@@ -188,7 +193,7 @@ class TtMonitoringProcessTest(TestCase):
         # проверяем, что дата сл мониторинга для yt ссылок не изменилась
         await self.yt_user_link.arefresh_from_db()
         await self.yt_music_link.arefresh_from_db()
-        self.assertEquals(
+        self.assertEqual(
             self.yt_user_link.next_monitoring_date,
             self.yt_music_link.next_monitoring_date,
             self.today,
@@ -246,7 +251,7 @@ class YtMonitoringProcessTest(TestCase):
         await yt_user_link.arefresh_from_db()
         self.assertEqual(
             yt_user_link.next_monitoring_date,
-            self.today + datetime.timedelta(hours=self.param.min_monitoring_timeout)
+            self.today + datetime.timedelta(hours=self.param.min_monitoring_timeout),
         )
         # проверяем, что tt ссылка осталась без изменений
         await self.tt_link.arefresh_from_db()
@@ -266,7 +271,7 @@ class YtMonitoringProcessTest(TestCase):
         await yt_user_link.arefresh_from_db()
         self.assertEqual(
             yt_user_link.next_monitoring_date,
-            self.today + datetime.timedelta(hours=self.param.min_monitoring_timeout)
+            self.today + datetime.timedelta(hours=self.param.min_monitoring_timeout),
         )
 
         # проверяем, что tt ссылка осталась без изменений
